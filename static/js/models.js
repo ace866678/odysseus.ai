@@ -592,7 +592,7 @@ export async function refreshModels(force = false, opts = {}) {
         + '<option value="deepseek-chat">DeepSeek Chat (if available)</option>'
         + '<option value="openai/gpt-oss-120b">GPT OSS 120B (if available)</option>'
         + '</select></div>'
-        + (window._isAdmin ? '<div style="margin-top:8px"><a href="#" onclick="document.getElementById(\\'user-bar-admin\\')?.click();return false;" class="accent-link">Configure a server provider in Admin</a></div>' : '');
+        + (window._isAdmin ? '<div style="margin-top:8px"><a href="#" onclick="document.getElementById(\'user-bar-admin\')?.click();return false;" class="accent-link">Configure a server provider in Admin</a></div>' : '');
 
       }
       box.appendChild(noModels);

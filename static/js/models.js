@@ -202,22 +202,30 @@ export async function refreshModels(force = false, opts = {}) {
         const _url = `${API_BASE}/api/models` + (force
           ? `?refresh=true${opts.waitForRefresh ? '&wait_refresh=true' : ''}`
           : '?background=false');
-        _fetchInflight = fetch(_url, { credentials: 'same-origin' })
+        const _fetchController = new AbortController();
+        const _fetchTimeout = setTimeout(() => _fetchController.abort(), 10000);
+        _fetchInflight = fetch(_url, { credentials: 'same-origin', signal: _fetchController.signal })
           .then(async (res) => {
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const data = await res.json();
             return { data, seq: _seq };
           })
-          .finally(() => { _fetchInflight = null; });
+          .finally(() => {
+            clearTimeout(_fetchTimeout);
+            _fetchInflight = null;
+          });
       }
       const { data, seq } = await _fetchInflight;
       if (seq < _fetchSeq) return;
       _lastFetchTime = Date.now();
       _cachedItems = data.items || [];
     } catch (e) {
-      console.error(e);
-      if (box) box.textContent = '(scan failed)';
-      return;
+      console.warn('[Odysseus models] Server model list unavailable; showing the built-in browser model instead.', e);
+      // Never leave the Models panel spinning forever. If the server model
+      // endpoint is unavailable, continue into the empty-state renderer below,
+      // which exposes SmolLM2 as the free on-device default.
+      _cachedItems = [];
+      _lastFetchTime = Date.now();
     } finally {
       try { _loadingSpinner && _loadingSpinner.stop && _loadingSpinner.stop(); } catch (_) {}
       if (box) box.classList.remove('models-refreshing');

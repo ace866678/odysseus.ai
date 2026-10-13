@@ -1,0 +1,48 @@
+/* Odysseus mobile composer reliability fixes.
+   Keep the send control visible/tappable above the Android keyboard and
+   make the hit target large enough for touch. */
+.chat-input-bottom {
+  visibility: visible !important;
+  display: flex !important;
+  align-items: center;
+  position: relative;
+  z-index: 80;
+}
+.chat-input-right {
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 81;
+}
+.send-btn {
+  display: inline-flex !important;
+  visibility: visible !important;
+  opacity: 1;
+  pointer-events: auto !important;
+  position: relative;
+  z-index: 82;
+  min-width: 44px !important;
+  width: 44px !important;
+  height: 44px !important;
+  flex: 0 0 44px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.send-btn svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+@media (max-width: 768px) {
+  .chat-input-bottom {
+    padding-bottom: max(4px, env(safe-area-inset-bottom));
+  }
+  .send-btn {
+    min-width: 46px !important;
+    width: 46px !important;
+    height: 46px !important;
+    flex-basis: 46px;
+  }
+}

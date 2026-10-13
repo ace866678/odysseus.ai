@@ -585,13 +585,8 @@ export async function refreshModels(force = false, opts = {}) {
         + '<div style="margin-top:10px;text-align:left">'
         + '<label for="ody-browser-ai-model" class="muted-sm">Browser AI model</label>'
         + '<select id="ody-browser-ai-model" style="width:100%;margin-top:5px">'
-        + '<option value="">Puter automatic model</option>'
-        + '<option value="gpt-5.4-nano">GPT 5.4 Nano (if available)</option>'
-        + '<option value="claude-sonnet-4-5">Claude Sonnet (if available)</option>'
-        + '<option value="gemini-2.5-flash">Gemini Flash (if available)</option>'
-        + '<option value="deepseek-chat">DeepSeek Chat (if available)</option>'
-        + '<option value="openai/gpt-oss-120b">GPT OSS 120B (if available)</option>'
-        + '</select></div>'
+        + '<option value="">Puter default model</option>'
+        + '</select><div class="muted-sm" id="ody-browser-ai-model-status" style="margin-top:5px">Loading available models…</div></div>'
         + (window._isAdmin ? '<div style="margin-top:8px"><a href="#" onclick="document.getElementById(\'user-bar-admin\')?.click();return false;" class="accent-link">Configure a server provider in Admin</a></div>' : '');
 
       }
@@ -603,6 +598,38 @@ export async function refreshModels(force = false, opts = {}) {
           try { localStorage.setItem('ody-browser-ai-model', browserModelSelect.value); } catch (_) {}
           uiModule.showToast('Browser AI model preference saved');
         });
+        const modelStatus = noModels.querySelector('#ody-browser-ai-model-status');
+        if (window.puter?.ai?.listModels) {
+          window.puter.ai.listModels().then((catalog) => {
+            const items = Array.isArray(catalog) ? catalog : (catalog?.models || catalog?.items || catalog?.data || []);
+            const normalized = items.map((item) => {
+              if (typeof item === 'string') return { id: item, label: item };
+              const id = String(item?.id || item?.model || item?.name || '').trim();
+              const name = String(item?.name || item?.label || id).trim();
+              const provider = String(item?.provider || item?.vendor || '').trim();
+              return id ? { id, label: provider && !name.toLowerCase().includes(provider.toLowerCase()) ? name + ' · ' + provider : name } : null;
+            }).filter(Boolean);
+            const seen = new Set();
+            const unique = normalized.filter(item => !seen.has(item.id) && seen.add(item.id));
+            if (!unique.length) {
+              if (modelStatus) modelStatus.textContent = 'Use the default model; the provider catalog was unavailable.';
+              return;
+            }
+            const saved = browserModelSelect.value;
+            browserModelSelect.replaceChildren(new Option('Puter default model', ''));
+            unique.slice(0, 100).forEach(item => browserModelSelect.add(new Option(item.label, item.id)));
+            if (saved && unique.some(item => item.id === saved)) browserModelSelect.value = saved;
+            else if (saved) {
+              try { localStorage.removeItem('ody-browser-ai-model'); } catch (_) {}
+              browserModelSelect.value = '';
+            }
+            if (modelStatus) modelStatus.textContent = unique.length + ' models found · availability and free access depend on the provider.';
+          }).catch(() => {
+            if (modelStatus) modelStatus.textContent = 'Could not load the live catalog. The default model is still available to try.';
+          });
+        } else if (modelStatus) {
+          modelStatus.textContent = 'Browser AI library did not load. Check your connection or content blockers.';
+        }
       }
     }
   } catch (e) {

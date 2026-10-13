@@ -1378,7 +1378,10 @@ import { invalidateSettings } from './appConfig.js';
   let _browserAIHistory = [];
   async function _tryBrowserAI(message, releaseSendFlag) {
     let selectedModel = '';
-    try { selectedModel = localStorage.getItem('ody-browser-ai-model') || 'smollm2-local'; } catch (_) {}
+    try {
+      const savedBrowserModel = localStorage.getItem('ody-browser-ai-model');
+      selectedModel = savedBrowserModel === null ? 'smollm2-local' : savedBrowserModel;
+    } catch (_) { selectedModel = 'smollm2-local'; }
     const useLocalModel = selectedModel === 'smollm2-local';
     if (!useLocalModel && (!window.puter || !window.puter.ai || typeof window.puter.ai.chat !== 'function')) return false;
     const input = uiModule.el('message');

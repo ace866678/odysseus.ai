@@ -1372,6 +1372,62 @@ import { invalidateSettings } from './appConfig.js';
   /**
    * Update submit button state
    */
+  // Browser-hosted fallback for deployments that have no configured server model.
+  // It runs in the normal chat UI rather than a separate test page.
+  let _browserAIHistory = [];
+  async function _tryBrowserAI(message, releaseSendFlag) {
+    if (!window.puter || !window.puter.ai || typeof window.puter.ai.chat !== 'function') return false;
+    const input = uiModule.el('message');
+    if (input) {
+      input.value = '';
+      if (uiModule.autoResize) uiModule.autoResize(input);
+    }
+    addMessage('user', message);
+    addMessage('assistant', 'Connecting to browser AI…', 'Puter AI');
+    const historyBox = document.getElementById('chat-history');
+    const answerBubble = historyBox ? historyBox.lastElementChild : null;
+    const body = answerBubble ? answerBubble.querySelector('.body') : null;
+    _browserAIHistory.push({ role: 'user', content: String(message || '') });
+    try {
+      const transcript = _browserAIHistory.map(item =>
+        (item.role === 'user' ? 'User: ' : 'Assistant: ') + item.content
+      ).join('\n\n') + '\n\nAssistant:';
+      let selectedModel = '';
+      try { selectedModel = localStorage.getItem('ody-browser-ai-model') || ''; } catch (_) {}
+      const response = selectedModel
+        ? await window.puter.ai.chat(transcript, { model: selectedModel })
+        : await window.puter.ai.chat(transcript);
+      let answer = '';
+      if (typeof response === 'string') answer = response;
+      else if (typeof response?.message === 'string') answer = response.message;
+      else if (typeof response?.message?.content === 'string') answer = response.message.content;
+      else if (Array.isArray(response?.message?.content)) answer = response.message.content.map(part => part.text || '').join('');
+      else if (typeof response?.text === 'string') answer = response.text;
+      else if (response?.choices?.[0]?.message?.content) answer = response.choices[0].message.content;
+      answer = String(answer || '').trim();
+      if (!answer) throw new Error('The provider returned an empty response.');
+      _browserAIHistory.push({ role: 'assistant', content: answer });
+      if (body) body.innerHTML = markdownModule.processWithThinking(markdownModule.squashOutsideCode(answer));
+      else addMessage('assistant', answer, 'Puter AI');
+      if (answerBubble) {
+        answerBubble.dataset.raw = answer;
+        answerBubble.classList.remove('streaming');
+        if (!answerBubble.querySelector('.msg-footer')) answerBubble.appendChild(createMsgFooter(answerBubble));
+      }
+      uiModule.scrollHistory();
+    } catch (error) {
+      _browserAIHistory.pop();
+      const messageText = 'Browser AI could not respond: ' + (error?.message || String(error)) +
+        '\n\nThe provider may require authorization or this model may be unavailable. Choose another option in Models, or configure a server provider in Admin.';
+      if (body) body.textContent = messageText;
+      else addMessage('assistant', messageText, 'Puter AI');
+      if (answerBubble) answerBubble.dataset.raw = messageText;
+    } finally {
+      releaseSendFlag();
+    }
+    return true;
+  }
+
   function updateSubmitButton(state, submitBtn) {
     if (!submitBtn) return;
 
@@ -2068,24 +2124,20 @@ import { invalidateSettings } from './appConfig.js';
           _sendPerf.mark('direct_chat_materialize_done');
           if (!ok || !sessionModule.getCurrentSessionId()) { _releaseSendFlag(); return; }
         } else {
+          if (await _tryBrowserAI(msg, _releaseSendFlag)) return;
           el('message').value = '';
           if (uiModule.autoResize) uiModule.autoResize(el('message'));
           addMessage('assistant',
-            'No chat session active. You can:\n\n' +
-            '- Open the model picker in the chat box and pick a model\n' +
-            '- Use the `+` button in the model picker to add a model endpoint\n' +
-            '- Use `/help` to see all available commands');
+            'No chat session active. No server model is configured yet. Open Models to configure a provider, or use /help for available commands.');
           _releaseSendFlag();
           return;
         }
       } catch (e) {
+        if (await _tryBrowserAI(msg, _releaseSendFlag)) return;
         el('message').value = '';
         if (uiModule.autoResize) uiModule.autoResize(el('message'));
         addMessage('assistant',
-          'No chat session active. You can:\n\n' +
-          '- Open the model picker in the chat box and pick a model\n' +
-          '- Use the `+` button in the model picker to add a model endpoint\n' +
-          '- Use `/help` to see all available commands');
+          'No chat session active. No server model is configured yet. Open Models to configure a provider, or use /help for available commands.');
         _releaseSendFlag();
         return;
       }

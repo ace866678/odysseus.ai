@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/",
+      "destination": "https://odysseus-production-55c7.up.railway.app/"
+    },
+    {
       "source": "/:path*",
       "destination": "https://odysseus-production-55c7.up.railway.app/:path*"
     }

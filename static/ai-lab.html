@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<title>Odysseus AI Lab · Provider Test</title>
+<style>
+:root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color-scheme:dark;--bg:#0b1020;--panel:#111a2e;--line:#28344c;--text:#eef3ff;--muted:#9aa9c4;--accent:#8b9dff}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top,#18264b 0,#0b1020 58%);color:var(--text);min-height:100vh}
+main{max-width:900px;margin:auto;padding:22px 16px 32px;display:flex;flex-direction:column;min-height:100vh;gap:16px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}h1{font-size:1.35rem;margin:0}p{line-height:1.5}.muted{color:var(--muted);font-size:.9rem}.pill{border:1px solid var(--line);border-radius:999px;padding:5px 10px;color:#c6d0ff;font-size:.78rem}
+.panel{border:1px solid var(--line);background:color-mix(in srgb,var(--panel) 94%,transparent);border-radius:16px;padding:14px}
+.controls{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:end}label{display:block;font-size:.82rem;color:var(--muted);margin-bottom:6px}select,textarea,button{font:inherit}select,textarea{width:100%;border:1px solid var(--line);border-radius:10px;background:#0b1325;color:var(--text);padding:11px}button{border:0;border-radius:10px;background:var(--accent);color:#0b1020;font-weight:700;padding:11px 16px;cursor:pointer}button:disabled{opacity:.5;cursor:wait}
+#messages{display:flex;flex-direction:column;gap:12px;flex:1;min-height:260px}.msg{padding:12px 14px;border-radius:13px;max-width:92%;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.55}.user{align-self:flex-end;background:#273967}.assistant{align-self:flex-start;background:#151f35;border:1px solid var(--line)}.system{align-self:stretch;color:var(--muted);font-size:.84rem;border:1px dashed var(--line);border-radius:10px;padding:10px}
+form{display:grid;gap:10px}textarea{resize:vertical;min-height:78px;max-height:240px} .sendrow{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.status{font-size:.82rem;color:var(--muted)}a{color:#b7c2ff}
+@media(max-width:560px){main{padding:14px 10px 22px}.controls{grid-template-columns:1fr}.msg{max-width:100%}h1{font-size:1.15rem}}
+</style>
+</head>
+<body>
+<main>
+<header><div><h1>Odysseus AI Lab</h1><div class="muted">Browser-based model test · no provider API key configured in Odysseus</div></div><span class="pill">EXPERIMENTAL</span></header>
+<section class="panel">
+<div class="controls"><div><label for="model">Model</label><select id="model">
+<option value="">Puter default (recommended first test)</option>
+<option value="gpt-5.4-nano">GPT 5.4 Nano</option>
+<option value="claude-sonnet-4-5">Claude Sonnet (if available)</option>
+<option value="gemini-2.5-flash">Gemini Flash (if available)</option>
+<option value="deepseek-chat">DeepSeek Chat (if available)</option>
+<option value="openai/gpt-oss-120b">GPT OSS 120B (if available)</option>
+</select></div><button id="clear" type="button">Clear chat</button></div>
+<p class="muted">Puter's available models and access rules can change. If a selected model is unavailable, try “Puter default”. The first request may open a Puter sign-in/authorization prompt. Don't send passwords, API keys, or private data to this test panel.</p>
+</section>
+<section id="messages" aria-live="polite"><div class="system">Ready to test. Send a message below. This experimental lab is separate from Odysseus's normal saved sessions, tools, and model dropdown.</div></section>
+<form id="chat-form" class="panel">
+<label for="prompt">Message</label><textarea id="prompt" placeholder="Ask Odysseus to explain, plan, write, or reason…" required></textarea>
+<div class="sendrow"><span id="status" class="status">Waiting for your message</span><button id="send" type="submit">Send message</button></div>
+</form>
+<footer class="muted">Powered by <a href="https://docs.puter.com/AI/" target="_blank" rel="noopener noreferrer">Puter.js AI</a>. AI availability, model access, and usage limits are controlled by the provider.</footer>
+</main>
+<script src="https://js.puter.com/v2/"></script>
+<script>
+(() => {
+  const form = document.getElementById('chat-form');
+  const promptEl = document.getElementById('prompt');
+  const modelEl = document.getElementById('model');
+  const messagesEl = document.getElementById('messages');
+  const statusEl = document.getElementById('status');
+  const sendBtn = document.getElementById('send');
+  let history = [];
+  const addMessage = (role, text) => {
+    const node = document.createElement('div');
+    node.className = 'msg ' + role;
+    node.textContent = text;
+    messagesEl.appendChild(node);
+    node.scrollIntoView({behavior:'smooth',block:'end'});
+    return node;
+  };
+  const extractText = (response) => {
+    if (typeof response === 'string') return response;
+    if (response && typeof response === 'object') {
+      if (typeof response.message === 'string') return response.message;
+      if (response.message && typeof response.message.content === 'string') return response.message.content;
+      if (Array.isArray(response.message?.content)) return response.message.content.map(p => p.text || '').join('');
+      if (typeof response.text === 'string') return response.text;
+      if (response.choices?.[0]?.message?.content) return response.choices[0].message.content;
+    }
+    return JSON.stringify(response, null, 2);
+  };
+  document.getElementById('clear').addEventListener('click', () => {
+    history = [];
+    messagesEl.replaceChildren();
+    const note = document.createElement('div');
+    note.className = 'system';
+    note.textContent = 'Chat cleared. Start a new test.';
+    messagesEl.appendChild(note);
+    statusEl.textContent = 'Waiting for your message';
+  });
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const text = promptEl.value.trim();
+    if (!text) return;
+    if (!window.puter || !puter.ai || typeof puter.ai.chat !== 'function') {
+      statusEl.textContent = 'Puter.js did not load. Check your connection or content blockers.';
+      addMessage('assistant', 'Unable to load Puter.js. Refresh the page or check whether your browser/network blocks js.puter.com.');
+      return;
+    }
+    history.push({role:'user', content:text});
+    addMessage('user', text);
+    promptEl.value = '';
+    sendBtn.disabled = true;
+    statusEl.textContent = 'Connecting to model…';
+    const assistantNode = addMessage('assistant', 'Thinking…');
+    try {
+      const transcript = history.map(m => (m.role === 'user' ? 'User: ' : 'Assistant: ') + m.content).join('\n\n');
+      const chosen = modelEl.value;
+      const response = chosen
+        ? await puter.ai.chat(transcript + '\n\nAssistant:', {model:chosen})
+        : await puter.ai.chat(transcript + '\n\nAssistant:');
+      const answer = extractText(response).trim() || '(The provider returned an empty response.)';
+      assistantNode.textContent = answer;
+      history.push({role:'assistant', content:answer});
+      statusEl.textContent = 'Response received';
+    } catch (error) {
+      assistantNode.textContent = 'Request failed: ' + (error?.message || String(error)) + '\n\nTry Puter default, or check whether Puter authorization is required.';
+      statusEl.textContent = 'Request failed';
+    } finally {
+      sendBtn.disabled = false;
+      promptEl.focus();
+    }
+  });
+})();
+</script>
+</body>
+</html>

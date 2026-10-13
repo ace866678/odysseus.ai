@@ -22,10 +22,11 @@ jobs:
     timeout-minutes: 45
     steps:
       - name: Checkout main
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           ref: main
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Download SmolLM2 ONNX weights and tokenizer
         run: |
@@ -57,20 +58,16 @@ jobs:
           ls -lh smollm2-360m-onnx.zip
 
       - name: Publish weights as a GitHub Release asset
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: smollm2-360m-onnx-v1
-          name: SmolLM2 360M ONNX v1
-          target_commitish: main
-          body: |
-            SmolLM2 360M Instruct ONNX weights for Odysseus AI.
-            Includes q4f16 WebGPU and quantized WASM weights plus tokenizer/config files.
-            The source repository is a public fork, so GitHub does not allow this workflow to upload new Git LFS objects.
-            The model is therefore packaged as a release asset instead of a 272+ MB Git blob.
-          draft: false
-          prerelease: true
-          make_latest: false
-          overwrite_files: true
-          files: smollm2-360m-onnx.zip
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="smollm2-360m-onnx-v1"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" smollm2-360m-onnx.zip --clobber
+          else
+            gh release create "$TAG" smollm2-360m-onnx.zip \
+              --target main \
+              --title "SmolLM2 360M ONNX v1" \
+              --notes "SmolLM2 360M Instruct ONNX weights for Odysseus AI. Includes q4f16 WebGPU and quantized WASM weights plus tokenizer/config files. Stored as a GitHub Release asset because GitHub blocks new Git LFS uploads from public forks." \
+              --prerelease
+          fi

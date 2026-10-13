@@ -1,0 +1,9 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://odysseus-production-55c7.up.railway.app/api/:path*"
+    }
+  ]
+}

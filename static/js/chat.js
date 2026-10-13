@@ -1372,43 +1372,52 @@ import { invalidateSettings } from './appConfig.js';
   /**
    * Update submit button state
    */
-  // Browser-hosted fallback for deployments that have no configured server model.
-  // It runs in the normal chat UI rather than a separate test page.
+  // Browser-hosted fallback for deployments without a configured server model.
+  // SmolLM2 runs on the user's device; weights are downloaded from Hugging Face
+  // on first use and cached by the browser, so Railway does not need model RAM.
   let _browserAIHistory = [];
   async function _tryBrowserAI(message, releaseSendFlag) {
-    if (!window.puter || !window.puter.ai || typeof window.puter.ai.chat !== 'function') return false;
+    let selectedModel = '';
+    try { selectedModel = localStorage.getItem('ody-browser-ai-model') || 'smollm2-local'; } catch (_) {}
+    const useLocalModel = selectedModel === 'smollm2-local';
+    if (!useLocalModel && (!window.puter || !window.puter.ai || typeof window.puter.ai.chat !== 'function')) return false;
     const input = uiModule.el('message');
     if (input) {
       input.value = '';
       if (uiModule.autoResize) uiModule.autoResize(input);
     }
     addMessage('user', message);
-    addMessage('assistant', 'Connecting to browser AI…', 'Puter AI');
+    addMessage('assistant', useLocalModel
+      ? 'Preparing SmolLM2 on this device… The first run downloads about 273 MB.'
+      : 'Connecting to browser AI…', useLocalModel ? 'SmolLM2 · On-device' : 'Puter AI');
     const historyBox = document.getElementById('chat-history');
     const answerBubble = historyBox ? historyBox.lastElementChild : null;
     const body = answerBubble ? answerBubble.querySelector('.body') : null;
     _browserAIHistory.push({ role: 'user', content: String(message || '') });
     try {
-      const transcript = _browserAIHistory.map(item =>
-        (item.role === 'user' ? 'User: ' : 'Assistant: ') + item.content
-      ).join('\n\n') + '\n\nAssistant:';
-      let selectedModel = '';
-      try { selectedModel = localStorage.getItem('ody-browser-ai-model') || ''; } catch (_) {}
-      const response = selectedModel
-        ? await window.puter.ai.chat(transcript, { model: selectedModel })
-        : await window.puter.ai.chat(transcript);
       let answer = '';
-      if (typeof response === 'string') answer = response;
-      else if (typeof response?.message === 'string') answer = response.message;
-      else if (typeof response?.message?.content === 'string') answer = response.message.content;
-      else if (Array.isArray(response?.message?.content)) answer = response.message.content.map(part => part.text || '').join('');
-      else if (typeof response?.text === 'string') answer = response.text;
-      else if (response?.choices?.[0]?.message?.content) answer = response.choices[0].message.content;
+      if (useLocalModel) {
+        const localModel = await import('./localModel.js?v=20261014-smollm2');
+        answer = await localModel.generateResponse(_browserAIHistory.slice(-12), (status) => {
+          if (body && status) body.textContent = status;
+        });
+      } else {
+        const transcript = _browserAIHistory.map(item =>
+          (item.role === 'user' ? 'User: ' : 'Assistant: ') + item.content
+        ).join('\n\n') + '\n\nAssistant:';
+        const response = await window.puter.ai.chat(transcript, { model: selectedModel });
+        if (typeof response === 'string') answer = response;
+        else if (typeof response?.message === 'string') answer = response.message;
+        else if (typeof response?.message?.content === 'string') answer = response.message.content;
+        else if (Array.isArray(response?.message?.content)) answer = response.message.content.map(part => part.text || '').join('');
+        else if (typeof response?.text === 'string') answer = response.text;
+        else if (response?.choices?.[0]?.message?.content) answer = response.choices[0].message.content;
+      }
       answer = String(answer || '').trim();
-      if (!answer) throw new Error('The provider returned an empty response.');
+      if (!answer) throw new Error('The model returned an empty response.');
       _browserAIHistory.push({ role: 'assistant', content: answer });
       if (body) body.innerHTML = markdownModule.processWithThinking(markdownModule.squashOutsideCode(answer));
-      else addMessage('assistant', answer, 'Puter AI');
+      else addMessage('assistant', answer, useLocalModel ? 'SmolLM2 · On-device' : 'Puter AI');
       if (answerBubble) {
         answerBubble.dataset.raw = answer;
         answerBubble.classList.remove('streaming');
@@ -1417,10 +1426,13 @@ import { invalidateSettings } from './appConfig.js';
       uiModule.scrollHistory();
     } catch (error) {
       _browserAIHistory.pop();
-      const messageText = 'Browser AI could not respond: ' + (error?.message || String(error)) +
-        '\n\nThe provider may require authorization or this model may be unavailable. Choose another option in Models, or configure a server provider in Admin.';
+      const messageText = (useLocalModel ? 'SmolLM2 could not run on this device: ' : 'Browser AI could not respond: ')
+        + (error?.message || String(error))
+        + (useLocalModel
+          ? '\n\nTry a browser with WebGPU support and enough free memory, or choose a different browser AI model in Models. The model files are downloaded from Hugging Face and cached by your browser; they are not stored in the GitHub repository.'
+          : '\n\nThe provider may require authorization or this model may be unavailable. Choose another option in Models, or configure a server provider in Admin.');
       if (body) body.textContent = messageText;
-      else addMessage('assistant', messageText, 'Puter AI');
+      else addMessage('assistant', messageText, useLocalModel ? 'SmolLM2 · On-device' : 'Puter AI');
       if (answerBubble) answerBubble.dataset.raw = messageText;
     } finally {
       releaseSendFlag();

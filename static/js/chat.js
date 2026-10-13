@@ -1376,7 +1376,7 @@ import { invalidateSettings } from './appConfig.js';
   // SmolLM2 runs on the user's device; weights are downloaded from Hugging Face
   // on first use and cached by the browser, so Railway does not need model RAM.
   let _browserAIHistory = [];
-  async function _tryBrowserAI(message, releaseSendFlag) {
+  async function _tryBrowserAI(message, releaseSendFlag, options = {}) {
     let selectedModel = '';
     try {
       const savedBrowserModel = localStorage.getItem('ody-browser-ai-model');
@@ -1384,18 +1384,27 @@ import { invalidateSettings } from './appConfig.js';
     } catch (_) { selectedModel = 'smollm2-local'; }
     const useLocalModel = selectedModel === 'smollm2-local';
     if (!useLocalModel && (!window.puter || !window.puter.ai || typeof window.puter.ai.chat !== 'function')) return false;
+    const existingHolder = options && options.existingHolder ? options.existingHolder : null;
     const input = uiModule.el('message');
     if (input) {
       input.value = '';
       if (uiModule.autoResize) uiModule.autoResize(input);
     }
-    addMessage('user', message);
-    addMessage('assistant', useLocalModel
-      ? 'Preparing SmolLM2 on this device… The first run downloads about 273 MB.'
-      : 'Connecting to browser AI…', useLocalModel ? 'SmolLM2 · On-device' : 'Puter AI');
+    if (!existingHolder) {
+      addMessage('user', message);
+      addMessage('assistant', useLocalModel
+        ? 'Preparing SmolLM2 on this device… The first run downloads about 273 MB.'
+        : 'Connecting to browser AI…', useLocalModel ? 'SmolLM2 · On-device' : 'Puter AI');
+    }
     const historyBox = document.getElementById('chat-history');
-    const answerBubble = historyBox ? historyBox.lastElementChild : null;
+    const answerBubble = existingHolder || (historyBox ? historyBox.lastElementChild : null);
     const body = answerBubble ? answerBubble.querySelector('.body') : null;
+    if (existingHolder && body) {
+      body.querySelectorAll('.agent-thinking-dots, .thinking-spinner, .spinner').forEach(node => node.remove());
+      body.textContent = useLocalModel
+        ? 'Preparing SmolLM2 on this device… The first run downloads about 273 MB.'
+        : 'Connecting to browser AI…';
+    }
     _browserAIHistory.push({ role: 'user', content: String(message || '') });
     try {
       let answer = '';
@@ -2871,6 +2880,12 @@ import { invalidateSettings } from './appConfig.js';
           if (m) errText = m[1].replace(/\\"/g, '"');
           else if (errBody.length < 200) errText = errBody;
         } catch {}
+        // If the configured server model/provider is unavailable, preserve this turn
+        // and answer bubble, then try the browser-hosted model instead.
+        if ([400, 402, 422, 429, 500, 502, 503, 504].includes(res.status)) {
+          const usedBrowserFallback = await _tryBrowserAI(msg, _releaseSendFlag, { existingHolder: holder });
+          if (usedBrowserFallback) return;
+        }
         // Auto-switch to chat mode for tool-related errors
         if (errText.includes('tool') || errText.includes('auto')) {
           errText = 'This model doesn\'t support agent tools — switched to Chat mode. Try again.';

@@ -590,7 +590,6 @@ export async function refreshModels(force = false, opts = {}) {
         + '</select><div class="muted-sm" id="ody-browser-ai-model-status" style="margin-top:5px">Loading available models…</div></div>'
         + (window._isAdmin ? '<div style="margin-top:8px"><a href="#" onclick="document.getElementById(\'user-bar-admin\')?.click();return false;" class="accent-link">Configure a server provider in Admin</a></div>' : '');
 
-      }
       box.appendChild(noModels);
       const browserModelSelect = noModels.querySelector('#ody-browser-ai-model');
       if (browserModelSelect) {
@@ -639,6 +638,7 @@ export async function refreshModels(force = false, opts = {}) {
         } else if (modelStatus) {
           modelStatus.textContent = 'SmolLM2 is available on-device; the optional Puter model catalog could not load.';
         }
+      }
       }
     }
   } catch (e) {

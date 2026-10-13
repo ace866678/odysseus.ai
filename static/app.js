@@ -4035,37 +4035,13 @@ function startOdysseusApp() {
       sendBtn.classList.add('mic-mode');
       sendBtn.classList.remove('newchat-mode', 'newchat-expanded');
     } else if (!hasText && !hasFiles && !_isSttEnabled()) {
-      clearTimeout(sendBtn._collapseTimer);
-      // Group chat: always show send button, never newchat mode
-      if (groupModule && groupModule.isActive()) {
-        sendBtn.innerHTML = _sendIcon;
-        sendBtn.title = 'Send to group';
-        newMode = 'idle';
-        sendBtn.classList.remove('mic-mode', 'newchat-mode', 'newchat-expanded');
-      } else {
-      // Check if we're already on a fresh empty session (welcome screen visible)
-      const isEmptySession = document.getElementById('chat-container')?.classList.contains('welcome-active');
-      if (isEmptySession) {
-        // Already on new chat — show arrow in muted style (ready to type)
-        sendBtn.innerHTML = _sendIcon;
-        sendBtn.title = 'Send message';
-        newMode = 'idle';
-        sendBtn.classList.add('newchat-mode'); // muted gray style
-        sendBtn.classList.remove('mic-mode', 'newchat-expanded');
-        clearTimeout(sendBtn._expandTimer);
-      } else {
-        sendBtn.innerHTML = _newChatIcon + '<span class="send-btn-label">+ New</span>';
-        sendBtn.title = 'New chat';
-        newMode = 'newchat';
-        sendBtn.classList.add('newchat-mode');
-        sendBtn.classList.remove('mic-mode');
-        // The button stays a 32px compact icon (no auto-expand to label —
-        // the "+ New" label inside is for screen readers only; sighted users
-        // see the spinning + on hover + the title tooltip).
-        clearTimeout(sendBtn._expandTimer);
-        sendBtn.classList.remove('newchat-expanded');
-      }
-      } // close group-else
+      // Keep the composer control as a send arrow. New-chat creation belongs
+      // to the dedicated New Chat controls, not the message-send button.
+      sendBtn.innerHTML = _sendIcon;
+      sendBtn.title = 'Send message';
+      newMode = 'idle';
+      sendBtn.classList.remove('mic-mode', 'newchat-mode', 'newchat-expanded');
+      clearTimeout(sendBtn._expandTimer);
     } else {
       newMode = 'send';
       clearTimeout(sendBtn._expandTimer);
@@ -4124,26 +4100,10 @@ function startOdysseusApp() {
         return;
       }
 
-	      // New chat mode — empty input, no attachments, no STT
-	      if (!hasText && !hasFiles && sendBtn.dataset.mode === 'newchat') {
-	        const isAlreadyNewChat = document.getElementById('chat-container')?.classList.contains('welcome-active');
-	        if (isAlreadyNewChat) {
-	          if (messageInput) messageInput.focus();
-	          _updateSendBtnIcon();
-	          return;
-	        }
-	        if (sessionModule) {
-	          const sessions = sessionModule.getSessions();
-	          const currentId = sessionModule.getCurrentSessionId();
-	          const current = sessions.find(s => s.id === currentId);
-          if (current && current.endpoint_url && current.model) {
-            sessionModule.createDirectChat(current.endpoint_url, current.model, current.endpoint_id);
-          } else {
-            // Fallback to rail button
-            const railNew = el('rail-new-session');
-            if (railNew) railNew.click();
-          }
-        }
+	      // Empty composer: focus the message field instead of creating a chat.
+      // The plus/new-chat action is available separately in the sidebar.
+      if (!hasText && !hasFiles && sendBtn.dataset.mode !== 'streaming' && !_isSttEnabled()) {
+        if (messageInput) messageInput.focus();
         return;
       }
 

@@ -620,23 +620,24 @@ export async function refreshModels(force = false, opts = {}) {
               if (modelStatus) modelStatus.textContent = 'Use the default model; the provider catalog was unavailable.';
               return;
             }
-            const saved = browserModelSelect.value || 'smollm2-local';
+            const saved = browserModelSelect.value;
             browserModelSelect.replaceChildren(
               new Option('SmolLM2 · On-device (download ~273 MB)', 'smollm2-local'),
               new Option('Puter default model', '')
             );
             unique.slice(0, 100).forEach(item => browserModelSelect.add(new Option(item.label, item.id)));
-            if (saved === 'smollm2-local' || (saved && unique.some(item => item.id === saved))) browserModelSelect.value = saved;
+            if (saved === '') browserModelSelect.value = '';
+            else if (saved === 'smollm2-local' || (saved && unique.some(item => item.id === saved))) browserModelSelect.value = saved;
             else if (saved) {
-              try { localStorage.removeItem('ody-browser-ai-model'); } catch (_) {}
-              browserModelSelect.value = '';
+              try { localStorage.setItem('ody-browser-ai-model', 'smollm2-local'); } catch (_) {}
+              browserModelSelect.value = 'smollm2-local';
             }
             if (modelStatus) modelStatus.textContent = unique.length + ' models found · availability and free access depend on the provider.';
           }).catch(() => {
             if (modelStatus) modelStatus.textContent = 'Could not load the live catalog. The default model is still available to try.';
           });
         } else if (modelStatus) {
-          modelStatus.textContent = 'Browser AI library did not load. Check your connection or content blockers.';
+          modelStatus.textContent = 'SmolLM2 is available on-device; the optional Puter model catalog could not load.';
         }
       }
     }

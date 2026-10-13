@@ -265,6 +265,7 @@
   <link rel="stylesheet" href="/static/css/15-notes.css?v=20260929csssplit">
   <link rel="stylesheet" href="/static/css/16-calendar.css?v=20260929csssplit">
   <link rel="stylesheet" href="/static/css/17-research.css?v=20260929csssplit">
+  <link rel="stylesheet" href="/static/css/18-chat-send-fix.css?v=20261014sendfix">
   <!-- Panel stylesheets split out of style.css for maintainability. They are
        eager and their order is load-bearing: the cascade is the concatenation of
        these files in this order, so they must stay in this order here and in the
@@ -1101,6 +1102,19 @@
             var dc = JSON.parse(localStorage.getItem('odysseus-default-chat-cache') || 'null');
             if (applyDefault(dc)) return;
           } catch (_) {}
+          // Until a configured server default is returned, make the free
+          // on-device model explicit in the main chat picker instead of leaving
+          // users with a misleading "Select model" label.
+          try {
+            if (localStorage.getItem('ody-browser-ai-model') === null) {
+              localStorage.setItem('ody-browser-ai-model', 'smollm2-local');
+            }
+          } catch (_) {}
+          var initialModelLabel = document.getElementById('model-picker-label');
+          if (initialModelLabel) {
+            initialModelLabel.textContent = 'SmolLM2 · On-device';
+            initialModelLabel.title = 'SmolLM2-360M-Instruct runs in your browser';
+          }
           fetch('/api/default-chat', { credentials: 'same-origin' })
             .then(function(r){ return r.ok ? r.json() : null; })
             .then(function(dc){

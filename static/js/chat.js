@@ -1447,7 +1447,10 @@ import { invalidateSettings } from './appConfig.js';
           : '\n\nThe provider may require authorization or this model may be unavailable. Choose another option in Models, or configure a server provider in Admin.');
       if (body) body.textContent = messageText;
       else addMessage('assistant', messageText, useLocalModel ? 'SmolLM2 · On-device' : 'Puter AI');
-      if (answerBubble) answerBubble.dataset.raw = messageText;
+      if (answerBubble) {
+        answerBubble.dataset.raw = messageText;
+        answerBubble.classList.remove('streaming');
+      }
     } finally {
       releaseSendFlag();
     }
@@ -5840,6 +5843,15 @@ import { invalidateSettings } from './appConfig.js';
             if (node._elapsedTicker) { clearInterval(node._elapsedTicker); node._elapsedTicker = null; }
             node.classList.remove('running');
           });
+          // If the server stream fails before producing any answer, try the
+          // on-device model as a last-resort responder. Do not replace partial
+          // output or interfere with an intentional Stop/abort.
+          if (!accumulated && !abortCtrl?.signal?.aborted && !err.terminalStreamError && !approvalForSend) {
+            const usedBrowserFallback = await _tryBrowserAI(msg, _releaseSendFlag, {
+              existingHolder: _catchViewHolder || holder,
+            });
+            if (usedBrowserFallback) return;
+          }
           // Stream died unexpectedly — the "silently died" case. Re-engage the
           // model immediately (no wait) with a completion handshake, up to the
           // cap. Only auto-recover from connection-class failures; deterministic

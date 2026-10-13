@@ -580,15 +580,30 @@ export async function refreshModels(force = false, opts = {}) {
     if (!_cachedItems || _cachedItems.length === 0) {
       const noModels = document.createElement('div');
       noModels.className = 'models-empty-state';
-      if (window._isAdmin) {
-        noModels.innerHTML = '<span class="muted">No models found</span><br>'
-          + '<a href="#" onclick="document.getElementById(\'user-bar-admin\')?.click();return false;" class="accent-link">Open Admin to add endpoints</a>'
-          + '<br><span class="muted-sm">Type /setup for Local models or API setup.</span>';
-      } else {
-        noModels.innerHTML = '<span class="muted">No models available</span><br>'
-          + '<span class="muted-sm">Ask an admin to configure model endpoints</span>';
+      noModels.innerHTML = '<span class="muted">No server models are configured</span><br>'
+        + '<span class="muted-sm">Odysseus will try browser AI directly in chat. Free access may require provider authorization; model availability can change.</span>'
+        + '<div style="margin-top:10px;text-align:left">'
+        + '<label for="ody-browser-ai-model" class="muted-sm">Browser AI model</label>'
+        + '<select id="ody-browser-ai-model" style="width:100%;margin-top:5px">'
+        + '<option value="">Puter automatic model</option>'
+        + '<option value="gpt-5.4-nano">GPT 5.4 Nano (if available)</option>'
+        + '<option value="claude-sonnet-4-5">Claude Sonnet (if available)</option>'
+        + '<option value="gemini-2.5-flash">Gemini Flash (if available)</option>'
+        + '<option value="deepseek-chat">DeepSeek Chat (if available)</option>'
+        + '<option value="openai/gpt-oss-120b">GPT OSS 120B (if available)</option>'
+        + '</select></div>'
+        + (window._isAdmin ? '<div style="margin-top:8px"><a href="#" onclick="document.getElementById(\\'user-bar-admin\\')?.click();return false;" class="accent-link">Configure a server provider in Admin</a></div>' : '');
+
       }
       box.appendChild(noModels);
+      const browserModelSelect = noModels.querySelector('#ody-browser-ai-model');
+      if (browserModelSelect) {
+        try { browserModelSelect.value = localStorage.getItem('ody-browser-ai-model') || ''; } catch (_) {}
+        browserModelSelect.addEventListener('change', () => {
+          try { localStorage.setItem('ody-browser-ai-model', browserModelSelect.value); } catch (_) {}
+          uiModule.showToast('Browser AI model preference saved');
+        });
+      }
     }
   } catch (e) {
     console.error(e);

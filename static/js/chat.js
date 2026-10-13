@@ -1408,7 +1408,9 @@ import { invalidateSettings } from './appConfig.js';
         const transcript = _browserAIHistory.map(item =>
           (item.role === 'user' ? 'User: ' : 'Assistant: ') + item.content
         ).join('\n\n') + '\n\nAssistant:';
-        const response = await window.puter.ai.chat(transcript, { model: selectedModel });
+        const response = selectedModel
+          ? await window.puter.ai.chat(transcript, { model: selectedModel })
+          : await window.puter.ai.chat(transcript);
         if (typeof response === 'string') answer = response;
         else if (typeof response?.message === 'string') answer = response.message;
         else if (typeof response?.message?.content === 'string') answer = response.message.content;

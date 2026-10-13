@@ -2,7 +2,7 @@
 // Runs SmolLM2 inside the user's browser. No model server or API key is required.
 // Model weights are fetched from Hugging Face on first use and cached by Transformers.js.
 let _pipelinePromise = null;
-const MODEL_ID = 'HuggingFaceTB/SmolLM2-360M-Instruct';
+const MODEL_ID = 'onnx-community/SmolLM2-360M-Instruct-ONNX';
 
 async function loadPipeline(onStatus) {
   if (_pipelinePromise) return _pipelinePromise;

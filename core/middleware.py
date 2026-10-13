@@ -140,12 +140,12 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             # don't execute script, the residual risk is visual-only.
             response.headers["Content-Security-Policy"] = (
                 "default-src 'self'; "
-                f"script-src 'self' 'nonce-{nonce}' https://cdn.jsdelivr.net; "
+                f"script-src 'self' 'nonce-{nonce}' 'wasm-unsafe-eval' https://cdn.jsdelivr.net; "
                 "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
                 "font-src 'self' https://cdn.jsdelivr.net; "
                 "img-src 'self' data: blob: https:; "
                 "media-src 'self' blob:; "
-                "connect-src 'self'; "
+                "connect-src 'self' https://huggingface.co https://*.huggingface.co https://*.xethub.hf.co; "
                 "frame-src 'self'; "
                 "frame-ancestors 'none'"
             )

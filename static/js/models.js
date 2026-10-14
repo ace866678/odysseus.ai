@@ -603,7 +603,7 @@ export async function refreshModels(force = false, opts = {}) {
             <label class="muted-sm" for="ody-provider-preset">Quick-add a provider</label>
             <select id="ody-provider-preset" style="width:100%;margin-top:5px">
               <option value="">— Select a provider preset —</option>
-              <option value="qwen">Qwen / DashScope (Alibaba) — ap-southeast-1</option>
+              <option value="qwen">QwenCloud / DashScope (OpenAI-compatible)</option>
               <option value="hf-router">Hugging Face Router — Free tier available</option>
               <option value="openrouter">OpenRouter — 100+ models</option>
               <option value="together">Together AI — Fast inference</option>
@@ -690,7 +690,7 @@ export async function refreshModels(force = false, opts = {}) {
           .catch(() => {
             // Fallback to built-in presets if server endpoint unavailable
             const FALLBACK_PRESETS = {
-              'qwen': { name: 'Qwen / DashScope', base_url: 'https://ap-southeast-1.maas.qwencloudapi.com/compatible-mode/v1', hint: 'Get API key from <a href="https://dashscope.aliyuncs.com/" target="_blank">DashScope Console</a>. Set as DASHSCOPE_API_KEY or paste directly.' },
+              'qwen': { name: 'QwenCloud / DashScope', base_url: 'https://maas.qwencloudapi.com/compatible-mode/v1', hint: 'Set DASHSCOPE_API_KEY in deployment secrets or paste a newly rotated key into the endpoint form. <a href="https://docs.qwencloud.com/api-reference/preparation/api-key" target="_blank" rel="noopener noreferrer">QwenCloud API key guide</a>.' },
               'hf-router': { name: 'Hugging Face Router', base_url: 'https://router.huggingface.co/v1', hint: 'Requires <a href="https://huggingface.co/settings/tokens" target="_blank">HF_TOKEN</a> with inference permissions. Free tier available.' },
               'openrouter': { name: 'OpenRouter', base_url: 'https://openrouter.ai/api/v1', hint: 'Get key from <a href="https://openrouter.ai/keys" target="_blank">OpenRouter Keys</a>. Access 100+ models.' },
               'together': { name: 'Together AI', base_url: 'https://api.together.xyz/v1', hint: 'Get key from <a href="https://api.together.xyz/settings/api-keys" target="_blank">Together AI</a>. $1 free credit.' },

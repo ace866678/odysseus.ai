@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content, viewport-fit=cover" />
-  <title>Odysseus Chat</title>
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 4L16 22L6 22Z' fill='%23e06c75'/%3E%3Cpath d='M16 8L16 22L24 22Z' fill='%23e06c75' opacity='0.6'/%3E%3Cpath d='M4 24Q10 20 16 24Q22 28 28 24' stroke='%23e06c75' stroke-width='2.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+  <title>Solomon AI — Personal AI Workspace</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='1' y='1' width='30' height='30' rx='7' fill='%230B1F38'/%3E%3Cpath d='M23 8H13a5 5 0 0 0 0 10h6a5 5 0 0 1 0 10H9' fill='none' stroke='%234F8CFF' stroke-width='3.5' stroke-linecap='round'/%3E%3C/svg%3E">
   <link rel="manifest" href="/static/manifest.json">
-  <meta name="theme-color" content="#282c34">
+  <meta name="theme-color" content="#071426">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <!-- Disable iOS / Android auto-linkifying of numbers (phone/date/address)
@@ -22,6 +22,14 @@
       if (t && t.colors) {
         var s = document.documentElement.style;
         var c = t.colors;
+        // Migrate the untouched legacy dark preset to Solomon AI navy before
+        // first paint; leave intentionally customized palettes unchanged.
+        if (t.name === 'dark' && !c.advanced &&
+            c.bg === '#282c34' && c.fg === '#9cdef2' &&
+            c.panel === '#111111' && c.border === '#355a66' &&
+            c.red === '#e06c75') {
+          c = t.colors = { bg: '#071426', fg: '#dce8f8', panel: '#0b1f38', border: '#1d3b61', red: '#4f8cff' };
+        }
         s.setProperty('--bg', c.bg);
         s.setProperty('--fg', c.fg);
         s.setProperty('--panel', c.panel);
@@ -39,9 +47,9 @@
         var mtc = document.querySelector('meta[name="theme-color"]');
         if (mtc && c.bg) mtc.setAttribute('content', c.bg);
         // Update favicon to match accent color
-        var ac = c.red || '#e06c75';
+        var ac = c.red || '#4f8cff';
         var fav = document.querySelector("link[rel='icon']");
-        if (fav) fav.href = 'data:image/svg+xml,' + encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><path d='M16 4L16 22L6 22Z' fill='" + ac + "'/><path d='M16 8L16 22L24 22Z' fill='" + ac + "' opacity='0.6'/><path d='M4 24Q10 20 16 24Q22 28 28 24' stroke='" + ac + "' stroke-width='2.5' fill='none' stroke-linecap='round'/></svg>");
+        if (fav) fav.href = 'data:image/svg+xml,' + encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='1' y='1' width='30' height='30' rx='7' fill='#071426'/><path d='M23 8H13a5 5 0 0 0 0 10h6a5 5 0 0 1 0 10H9' fill='none' stroke='" + ac + "' stroke-width='3.5' stroke-linecap='round'/></svg>");
         // Derive syntax highlighting colors from theme
         function h2hsl(hex) {
           hex = hex.replace('#','');
@@ -170,15 +178,15 @@
       apple.href = href;
       // Also customize the page title so the bookmark inherits a useful name.
       var titles = {
-        '/calendar': 'Calendar — Odysseus',
-        '/notes': 'Notes — Odysseus',
-        '/cookbook': 'Cookbook — Odysseus',
-        '/email': 'Email — Odysseus',
-        '/memory': 'Memory — Odysseus',
-        '/skills': 'Skills — Odysseus',
-        '/gallery': 'Gallery — Odysseus',
-        '/tasks': 'Tasks — Odysseus',
-        '/library': 'Library — Odysseus',
+        '/calendar': 'Calendar — Solomon AI',
+        '/notes': 'Notes — Solomon AI',
+        '/cookbook': 'Cookbook — Solomon AI',
+        '/email': 'Email — Solomon AI',
+        '/memory': 'Memory — Solomon AI',
+        '/skills': 'Skills — Solomon AI',
+        '/gallery': 'Gallery — Solomon AI',
+        '/tasks': 'Tasks — Solomon AI',
+        '/library': 'Library — Solomon AI',
       };
       if (titles[path]) document.title = titles[path];
       // Per-route Android home-screen icon. We swap the <link rel="manifest">
@@ -188,8 +196,8 @@
       try {
         if (inner && typeof Blob !== 'undefined') {
           var pwa = {
-            name: (titles[path] || 'Odysseus'),
-            short_name: (titles[path] || 'Odysseus').split('—')[0].trim(),
+            name: (titles[path] || 'Solomon AI'),
+            short_name: (titles[path] || 'Solomon AI').split('—')[0].trim(),
             start_url: path,
             scope: '/',
             display: 'standalone',
@@ -247,7 +255,7 @@
        real request is discarded and the font fetched a second time. -->
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/static/fonts/FiraCode-Regular.woff2">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/static/fonts/FiraCode-SemiBold.woff2">
-  <link rel="stylesheet" href="/static/css/00-tokens.css?v=20260929csssplit">
+  <link rel="stylesheet" href="/static/css/00-tokens.css?v=20261014solomonbrand1">
   <link rel="stylesheet" href="/static/css/01-agent-chat.css?v=20260929csssplit">
   <link rel="stylesheet" href="/static/css/02-compare.css?v=20260929csssplit">
   <link rel="stylesheet" href="/static/css/03-agent-chat.css?v=20260929csssplit">
@@ -273,7 +281,7 @@
   <link rel="stylesheet" href="/static/css/documents-gallery-editor.css?v=20260929csssplit">
   <link rel="stylesheet" href="/static/css/email-calendar-notes-tasks.css?v=20260929csssplit">
   <link rel="stylesheet" href="/static/css/cookbook-research-memory-settings.css?v=20260929csssplit">
-  <link rel="modulepreload" href="/static/app.js?v=20261014-arrow-sendfix">
+  <link rel="modulepreload" href="/static/app.js?v=20261014solomonbrand1">
 <link rel="modulepreload" href="/static/js/chat.js?v=20260917toolttft1">
   <link rel="modulepreload" href="/static/js/ui.js?v=20260916largetoolscroll1">
   <link rel="modulepreload" href="/static/js/sessions.js">
@@ -585,7 +593,7 @@
         <div class="theme-adv-group">
           <div class="theme-adv-group-label">Sidebar</div>
           <div class="theme-custom">
-            <div class="color-row"><label>Odysseus Logo</label><input type="color" id="adv-brandColor"><button class="color-reset-btn" data-reset-adv="brandColor" title="Reset this color" aria-label="Reset color">&#x21BA;</button></div>
+            <div class="color-row"><label>Solomon AI Logo</label><input type="color" id="adv-brandColor"><button class="color-reset-btn" data-reset-adv="brandColor" title="Reset this color" aria-label="Reset color">&#x21BA;</button></div>
             <div class="color-row"><label title="Hamburger menu"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="vertical-align:-2px;"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></label><input type="color" id="adv-hamburgerColor"><button class="color-reset-btn" data-reset-adv="hamburgerColor" title="Reset this color" aria-label="Reset color">&#x21BA;</button></div>
           </div>
         </div>
@@ -780,7 +788,7 @@
     <div class="sidebar-header">
       <button class="sidebar-hamburger" id="sidebar-toggle-btn" title="Toggle sidebar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
       <div class="sidebar-brand" id="sidebar-brand-btn" style="cursor:pointer;" title="New chat">
-        <span class="sidebar-brand-title">Odysseus</span>
+        <span class="sidebar-brand-title">Solomon AI</span>
       </div>
     </div>
     <div class="sidebar-inner">
@@ -1003,12 +1011,12 @@
          never affects layout, but always present inside the main landmark
          (the sidebar that shows the visible brand is hidden off-canvas on
          mobile) so the page always exposes a single level-1 heading. -->
-    <h1 class="a11y-visually-hidden">Odysseus</h1>
+    <h1 class="a11y-visually-hidden">Solomon AI</h1>
     <div class="chat-top-bar">
       <button type="button" class="incognito-indicator" id="incognito-indicator" title="Nobody mode active — click to deactivate" style="display:none;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><line x1="8" y1="16" x2="16" y2="8"/><line x1="8" y1="8" x2="16" y2="16"/></svg></button>
-      <div class="chat-meta-overlay"><span id="current-meta">Odysseus Chat</span><span id="current-meta-count" class="chat-meta-count" aria-hidden="true"></span><span id="session-cost-display" class="session-cost-display" style="display:none;"></span><button type="button" class="chat-context-pill" id="chat-context-pill" title="Chat context" hidden><span class="chat-context-dot"></span><span id="chat-context-pill-label">0%</span></button><span class="export-dropdown-wrap" id="export-dropdown-wrap"><button type="button" class="export-dl-btn" id="export-dl-btn" title="More"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button><div class="export-dropdown-menu" id="export-dropdown-menu"><div class="export-dropdown-item" id="export-rename-btn"><span class="dropdown-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></span><span>Rename</span></div><div class="export-dropdown-item" id="export-compact-btn"><span class="dropdown-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M7 12h10"/><path d="M10 17h4"/></svg></span><span class="export-compact-pill">Compact</span></div><div class="export-dropdown-item" id="export-copy-btn"><span class="dropdown-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></span><span>Copy Chat</span></div><div class="export-dropdown-item" id="export-pdf-btn"><span class="dropdown-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15v-2h2a1.5 1.5 0 0 1 0 3H9z"/></svg></span><span>PDF</span></div><div class="export-dropdown-item dropdown-item-danger" id="export-delete-btn"><span class="dropdown-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></span><span>Delete Chat</span></div></div></span></div>    </div>
+      <div class="chat-meta-overlay"><span id="current-meta">Solomon AI</span><span id="current-meta-count" class="chat-meta-count" aria-hidden="true"></span><span id="session-cost-display" class="session-cost-display" style="display:none;"></span><button type="button" class="chat-context-pill" id="chat-context-pill" title="Chat context" hidden><span class="chat-context-dot"></span><span id="chat-context-pill-label">0%</span></button><span class="export-dropdown-wrap" id="export-dropdown-wrap"><button type="button" class="export-dl-btn" id="export-dl-btn" title="More"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button><div class="export-dropdown-menu" id="export-dropdown-menu"><div class="export-dropdown-item" id="export-rename-btn"><span class="dropdown-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></span><span>Rename</span></div><div class="export-dropdown-item" id="export-compact-btn"><span class="dropdown-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M7 12h10"/><path d="M10 17h4"/></svg></span><span class="export-compact-pill">Compact</span></div><div class="export-dropdown-item" id="export-copy-btn"><span class="dropdown-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></span><span>Copy Chat</span></div><div class="export-dropdown-item" id="export-pdf-btn"><span class="dropdown-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15v-2h2a1.5 1.5 0 0 1 0 3H9z"/></svg></span><span>PDF</span></div><div class="export-dropdown-item dropdown-item-danger" id="export-delete-btn"><span class="dropdown-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></span><span>Delete Chat</span></div></div></span></div>    </div>
     <div id="welcome-screen">
-      <div class="welcome-name"><svg class="welcome-boat" viewBox="0 0 32 32"><path d="M16 4L16 22L6 22Z" fill="currentColor"/><path d="M16 8L16 22L24 22Z" fill="currentColor" opacity="0.6"/><path d="M4 24Q10 20 16 24Q22 28 28 24" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round"/></svg>Odysseus</div>
+      <div class="welcome-name"><svg class="welcome-boat" viewBox="0 0 32 32" aria-hidden="true"><rect x="1" y="1" width="30" height="30" rx="7" fill="#0b1f38"/><path d="M23 8H13a5 5 0 0 0 0 10h6a5 5 0 0 1 0 10H9" fill="none" stroke="#4f8cff" stroke-width="3.5" stroke-linecap="round"/></svg>Solomon AI</div>
       <div class="welcome-sub" id="welcome-sub">A voyage begins.</div>
       <div class="welcome-tip" id="welcome-tip" role="note"></div>
       <button type="button" class="incognito-btn" id="incognito-btn" title="Enable Nobody mode — no memory or skill injection, no history saved">
@@ -1062,7 +1070,7 @@
     <div class="chat-input-bar">
       <div class="chat-input-top">
         <div id="message-ghost" class="ghost-text-overlay" aria-hidden="true"></div>
-        <textarea id="message" placeholder="Message Odysseus..." required autocomplete="off" aria-label="Message input" rows="1" autofocus></textarea>
+        <textarea id="message" placeholder="Message Solomon AI..." required autocomplete="off" aria-label="Message input" rows="1" autofocus></textarea>
         <div id="plan-mode-status" class="plan-mode-status" hidden>
           <span class="plan-mode-status-label">Plan mode</span>
           <button type="button" id="plan-mode-status-toggle" class="plan-mode-status-toggle" aria-label="Turn off plan mode" aria-pressed="true">
@@ -1878,7 +1886,7 @@
             <div class="vis-toggles">
               <label class="vis-row">
                 <span class="vis-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M8 12l2.5 2.5L16 9"/></svg></span>
-                <span class="vis-label">Odysseus <span class="vis-hint">Brand name</span></span>
+                <span class="vis-label">Solomon AI <span class="vis-hint">Brand name</span></span>
                 <input type="checkbox" checked data-ui-key="sidebar-brand"><span class="vis-switch"></span>
               </label>
               <label class="vis-row">
@@ -2213,7 +2221,7 @@
           </div>
           <div class="admin-card">
             <h2><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px;opacity:0.6"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>Public App URL</h2>
-            <div class="admin-toggle-sub" style="margin-bottom:8px">Used to build clickable links back to Odysseus inside outgoing reminder / urgent-email emails (e.g. <code>https://chat.yourdomain.com</code>). Leave blank to omit links.</div>
+            <div class="admin-toggle-sub" style="margin-bottom:8px">Used to build clickable links back to Solomon AI inside outgoing reminder / urgent-email emails (e.g. <code>https://chat.yourdomain.com</code>). Leave blank to omit links.</div>
             <div class="settings-col">
               <div class="settings-row">
                 <label class="settings-label">URL</label>
@@ -2679,13 +2687,13 @@
 <script type="module" src="/static/js/cookbook.js"></script>
 <script src="/static/js/cookbookSchedule.js"></script>
 <script type="module" src="/static/js/search-chat.js"></script>
-<script type="module" src="/static/js/theme.js?v=20260911organsrain1"></script>
+<script type="module" src="/static/js/theme.js?v=20261014solomonbrand1"></script>
 <script type="module" src="/static/js/censor.js"></script>
 <script type="module" src="/static/js/settings.js?v=20260912writingstyle3"></script>
 <script type="module" src="/static/js/assistant.js?v=20260912firefoxjscleanup1"></script>
-<script type="module" src="/static/app.js?v=20261014-arrow-sendfix"></script>  <!-- app.js must be LAST -->
+<script type="module" src="/static/app.js?v=20261014solomonbrand1"></script>  <!-- app.js must be LAST -->
   <script type="module" src="/static/js/init.js?v=20260829chatstyle12"></script>
 <script type="module" src="/static/js/a11y.js"></script>
-<script nonce="{{CSP_NONCE}}">if('serviceWorker' in navigator){navigator.serviceWorker.register('/static/sw.js?v=20260916autoscroll1').catch(()=>{});}</script>
+<script nonce="{{CSP_NONCE}}">if('serviceWorker' in navigator){navigator.serviceWorker.register('/static/sw.js?v=20261014solomonbrand1').catch(()=>{});}</script>
 </body>
 </html>

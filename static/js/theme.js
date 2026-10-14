@@ -9,7 +9,7 @@ import { makeWindowDraggable } from './windowDrag.js';
 import { snapModalToZone } from './tileManager.js?v=20260910responsivebounds1';
 
 export const THEMES = {
-  dark:       { bg:'#282c34', fg:'#9cdef2', panel:'#111111', border:'#355a66', red:'#e06c75' },
+  dark:       { bg:'#071426', fg:'#dce8f8', panel:'#0b1f38', border:'#1d3b61', red:'#4f8cff' },
   light:      { bg:'#f3f5f7', fg:'#26313a', panel:'#ffffff', border:'#cbd3da', red:'#b34d5c' },
   midnight:   { bg:'#0d1117', fg:'#c9d1d9', panel:'#161b22', border:'#30363d', red:'#f85149' },
   // Spicy / fun themes
@@ -218,7 +218,7 @@ const ADV_KEYS = [
   { key: 'aiBubbleBg',         css: '--ai-bubble-bg',      label: 'AI Chat Bubble',   group: 'Chat Bubbles' },
   { key: 'bubbleBorder',       css: '--bubble-border',     label: 'Border Chat Bubble', group: 'Chat Bubbles' },
   { key: 'sidebarBg',          css: '--sidebar-bg',        label: 'Sidebar Bg',       group: 'Sidebar' },
-  { key: 'brandColor',         css: '--brand-color',       label: 'Odysseus Logo',    group: 'Sidebar' },
+  { key: 'brandColor',         css: '--brand-color',       label: 'Solomon AI Logo',    group: 'Sidebar' },
   { key: 'brandMixTo',         css: '--brand-mix-to',      label: 'Logo Gradient End', group: 'Sidebar' },
   { key: 'hamburgerColor',     css: '--hamburger-color',   label: 'Hamburger Menu',   group: 'Sidebar' },
   { key: 'inputBg',            css: '--input-bg',          label: 'Input Bg',         group: 'Chat Input / Prompt Area' },
@@ -232,7 +232,7 @@ const ADV_KEYS = [
 
 function computeAdvancedDefaults(colors) {
   const syn = deriveSyntaxColors(colors);
-  const red = colors.red || '#e06c75';
+  const red = colors.red || '#4f8cff';
   return {
     userBubbleBg: colors.bg,
     aiBubbleBg: colors.panel,
@@ -322,7 +322,7 @@ export function applyColors(colors) {
   }
 
   // Update favicon to match theme accent color
-  _updateFavicon(colors.red || '#e06c75');
+  _updateFavicon(colors.red || '#4f8cff');
 }
 
 // Per-route SVG shape registry — kept in sync with the inline favicon
@@ -370,7 +370,7 @@ function _updateFavicon(fg) {
   if (routeShape) {
     svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'>${routeShape.split('__C__').join(fg)}</svg>`;
   } else {
-    svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><path d='M16 4L16 22L6 22Z' fill='${fg}'/><path d='M16 8L16 22L24 22Z' fill='${fg}' opacity='0.6'/><path d='M4 24Q10 20 16 24Q22 28 28 24' stroke='${fg}' stroke-width='2.5' fill='none' stroke-linecap='round'/></svg>`;
+    svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='1' y='1' width='30' height='30' rx='7' fill='#071426'/><path d='M23 8H13a5 5 0 0 0 0 10h6a5 5 0 0 1 0 10H9' fill='none' stroke='${fg}' stroke-width='3.5' stroke-linecap='round'/></svg>`;
   }
   const href = 'data:image/svg+xml,' + encodeURIComponent(svg);
   let link = document.querySelector("link[rel='icon']");
@@ -513,6 +513,13 @@ export function getSaved() {
   if (obj && replacement[obj.name] && THEMES[replacement[obj.name]]) {
     obj.name = replacement[obj.name];
     obj.colors = { ...THEMES[obj.name] };
+  }
+  // Migrate the untouched old dark preset, but preserve any custom palette.
+  if (obj && obj.name === 'dark' && obj.colors && !obj.colors.advanced &&
+      obj.colors.bg === '#282c34' && obj.colors.fg === '#9cdef2' &&
+      obj.colors.panel === '#111111' && obj.colors.border === '#355a66' &&
+      obj.colors.red === '#e06c75') {
+    obj.colors = { ...THEMES.dark };
   }
   if (obj && obj.font) obj.font = normalizeFont(obj.font);
   return obj;
@@ -700,7 +707,7 @@ export function initThemeUI() {
         <span style="background:${c.fg}"></span>
         <span style="background:${c.red}"></span>
       </div>
-      ${name === 'dark' ? 'original' : (name === 'gpt' ? 'GPT' : (THEME_DISPLAY_NAMES[name] || name))}
+      ${name === 'dark' ? 'Solomon Navy' : (name === 'gpt' ? 'GPT' : (THEME_DISPLAY_NAMES[name] || name))}
     </div>
   `).join('');
 

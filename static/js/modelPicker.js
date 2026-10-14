@@ -16,6 +16,50 @@ const API_BASE = window.location.origin;
 const RECENT_KEY = 'odysseus-model-recent';
 const FAVORITES_KEY = 'odysseus-model-favorites';
 const RECENT_MAX = 5;
+const FREE_ROUTE_KEY = 'ody-free-model-route';
+const BROWSER_FREE_MODEL = 'smollm2-local';
+const BROWSER_FREE_LABEL = 'SmolLM2 · On-device';
+
+function _readFreeRoute() {
+  try {
+    const value = JSON.parse(localStorage.getItem(FREE_ROUTE_KEY) || 'null');
+    return value && typeof value === 'object' ? value : null;
+  } catch (_) { return null; }
+}
+function _saveFreeRoute(route) {
+  try { localStorage.setItem(FREE_ROUTE_KEY, JSON.stringify(route)); } catch (_) {}
+}
+
+function _isZeroPrice(value) {
+  if (typeof value === 'number') return Number.isFinite(value) && value === 0;
+  if (typeof value !== 'string') return false;
+  const normalized = value.trim().replace(/[\s$,]/g, '').replace(/\/(?:m|1m|million|token|tokens)$/i, '');
+  return /^(?:0+(?:\.0+)?|0e[+-]?\d+)$/i.test(normalized);
+}
+
+function _hasExplicitFreePricing(item, modelId) {
+  const metadata = item?.models_metadata?.[modelId];
+  if (!metadata || typeof metadata !== 'object') return false;
+  if (metadata.free === true || metadata.is_free === true || metadata.isFree === true) return true;
+  const pricing = metadata.pricing || metadata.prices || metadata.cost || metadata;
+  if (!pricing || typeof pricing !== 'object') return false;
+  const input = pricing.prompt ?? pricing.input ?? pricing.input_cost ?? pricing.inputCost ?? pricing.prompt_cost;
+  const output = pricing.completion ?? pricing.output ?? pricing.output_cost ?? pricing.outputCost ?? pricing.completion_cost;
+  return input !== undefined && output !== undefined && _isZeroPrice(input) && _isZeroPrice(output);
+}
+
+function _isKnownFreeModel(item, modelId) {
+  const mid = String(modelId || '').trim().toLowerCase();
+  if (!mid) return false;
+  const category = String(item?.category || '').toLowerCase();
+  const kind = String(item?.endpoint_kind || item?.endpointKind || '').toLowerCase();
+  if (category === 'local' || kind === 'local') return true;
+  if (_hasExplicitFreePricing(item, modelId)) return true;
+  let host = '';
+  try { host = new URL(item?.url || item?.base_url || '', window.location.origin).hostname.toLowerCase(); } catch (_) {}
+  const isOpenRouter = host === 'openrouter.ai' || host.endsWith('.openrouter.ai');
+  return isOpenRouter && (mid === 'openrouter/free' || mid.endsWith(':free'));
+}
 // Catalogs at or below this size are small enough that hiding everything
 // behind search would be a regression — keep listing them in browse mode.
 const BROWSE_ALL_LIMIT = 12;
@@ -291,6 +335,9 @@ function _initModelPickerDropdown() {
       const probeResult = item.endpoint_id ? _localProbe[item.endpoint_id] : null;
       const isLocalDead = !!(probeResult && probeResult.alive === false);
       allModels.forEach((mid, i) => {
+        // Only show local models, explicit zero-price metadata, or OpenRouter's
+        // published free routes; hide unknown/paid API models.
+        if (!_isKnownFreeModel(item, mid)) return;
         // A registered route is a user choice, including local routes using
         // identical weights with different harness profiles. Never collapse
         // distinct endpoints just because their model IDs match.
@@ -309,6 +356,7 @@ function _initModelPickerDropdown() {
           epName: item.endpoint_name || '',
           category: item.category || '',
           modelsMetadata: item.models_metadata || {},
+          endpointKind: item.endpoint_kind || item.endpointKind || '',
           providerText: [
             item.endpoint_name || '',
             item.category || '',
@@ -322,6 +370,21 @@ function _initModelPickerDropdown() {
           offline: epOffline,
         });
       });
+    });
+    result.push({
+      key: 'browser::smollm2-local',
+      mid: BROWSER_FREE_MODEL,
+      display: BROWSER_FREE_LABEL + ' (free)',
+      url: '',
+      endpointId: '',
+      epName: 'Browser AI · Free',
+      category: 'browser',
+      endpointKind: 'browser',
+      providerText: 'on-device browser free local smollm2',
+      stale: false,
+      staleReason: '',
+      offline: false,
+      browserOnly: true,
     });
     return sortModelObjects(result);
   }
@@ -409,6 +472,7 @@ function _initModelPickerDropdown() {
   const _endpointGroupNames = new Map();
   function _providerGroupKey(m) {
     if (!m) return 'other';
+    if (m.browserOnly) return '~endpoint:Browser AI · Free';
     // Grouping must be keyed on endpoint_id, falling back to url or epName
     const gid = m.endpointId || m.url || (m.category && m.category !== 'local' && m.epName ? m.epName : '');
     if (gid) {
@@ -663,6 +727,21 @@ function _initModelPickerDropdown() {
 
 async function _pick(m) {
     _defaultPendingSeq++;
+    if (m && m.browserOnly) {
+      try { localStorage.setItem('ody-browser-ai-model', BROWSER_FREE_MODEL); } catch (_) {}
+      _saveFreeRoute({ type: 'browser', model: BROWSER_FREE_MODEL });
+      try { _deps.setPendingChat(null); } catch (_) {}
+      try { delete window.__odysseusLastPickedRoute; } catch (_) {}
+      if (document.activeElement) document.activeElement.blur();
+      _close();
+      if (window.innerWidth >= 768) {
+        const textarea = document.getElementById('message');
+        if (textarea) setTimeout(() => textarea.focus(), 50);
+      }
+      updateModelPicker();
+      uiModule.showToast('Using ' + BROWSER_FREE_LABEL + ' (free)');
+      return;
+    }
     let previousLastPickedRoute = null;
     try {
       previousLastPickedRoute = window.__odysseusLastPickedRoute || null;
@@ -715,9 +794,14 @@ async function _pick(m) {
       if (_ta) setTimeout(() => _ta.focus(), 50);
     }
 
+    const saveSelectedFreeServerRoute = () => _saveFreeRoute({
+      type: 'server', model: m.mid, url: m.url || '', endpointId: m.endpointId || '',
+    });
+
     if (!currentSessionId && _pendingChat) {
-      // This is still an unmaterialized new chat: update its pending route only.
+      // Keep a model pick pending. Materializing here cleared the visible chat.
       _deps.setPendingChat({ url: m.url, modelId: m.mid, endpointId: m.endpointId, source: 'manual' });
+      saveSelectedFreeServerRoute();
       updateModelPicker();
       uiModule.showToast(`Using ${m.display}`);
       finishSwitch();
@@ -725,17 +809,14 @@ async function _pick(m) {
     }
 
     if (!currentSessionId) {
-      // No persisted session is selected, so prepare a new chat. This only
-      // resets the chat area/welcome screen; it does not reload the document.
-      try {
-        await _deps.createDirectChat(m.url, m.mid, m.endpointId);
-      } catch (e) {
-        restoreLastPickedRoute();
-        updateModelPicker();
-        uiModule.showError('Failed to start chat: ' + e);
-        finishSwitch();
-        return;
-      }
+      // Keep the current screen intact; create the server session only when a
+      // user sends a message. Selecting a model must not clear/reload the chat.
+      _deps.setPendingChat({ url: m.url, modelId: m.mid, endpointId: m.endpointId, source: 'manual' });
+      saveSelectedFreeServerRoute();
+      updateModelPicker();
+      uiModule.showToast('Using ' + m.display);
+      finishSwitch();
+      return;
     } else {
       // Change the persisted route first; only update local state after a
       // successful PATCH, so failed requests cannot make picker/send disagree.
@@ -769,6 +850,7 @@ async function _pick(m) {
           s.endpoint_id = m.endpointId || '';
           s.endpoint_name = m.epName || '';
         }
+        saveSelectedFreeServerRoute();
       } catch (e) {
         restoreLastPickedRoute();
         updateModelPicker();
@@ -783,6 +865,22 @@ async function _pick(m) {
     uiModule.showToast(`Using ${m.display}`);
     finishSwitch();
   }
+
+  document.addEventListener('odysseus:select-free-model', (e) => {
+    const detail = (e && e.detail) || {};
+    const targetModel = String(detail.modelId || '');
+    const targetUrl = String(detail.url || '');
+    const targetEndpointId = String(detail.endpointId || '');
+    const match = _getAllModels().find(model => !model.browserOnly
+      && model.mid === targetModel
+      && (model.url || '') === targetUrl
+      && (!targetEndpointId || String(model.endpointId || '') === targetEndpointId));
+    if (!match) {
+      uiModule.showError('That model is no longer available as a verified free model. Choose another free model.');
+      return;
+    }
+    _pick(match);
+  });
 
   document.addEventListener('odysseus:auto-select-model', async (e) => {
     const detail = (e && e.detail) || {};
@@ -923,6 +1021,16 @@ export function updateModelPicker() {
   const sessions = _deps.getSessions();
   const _pendingChat = _deps.getPendingChat();
   const s = sessions.find(x => x.id === currentSessionId);
+  const freeRoute = _readFreeRoute();
+  const freeRouteMatchesSession = !!(freeRoute && freeRoute.type === 'server' && s
+    && freeRoute.model === (s.model || '') && freeRoute.url === (s.endpoint_url || ''));
+  const freeRouteMatchesPending = !!(freeRoute && freeRoute.type === 'server' && _pendingChat
+    && freeRoute.model === (_pendingChat.modelId || '') && freeRoute.url === (_pendingChat.url || ''));
+  if (!freeRoute || freeRoute.type !== 'server' || (!freeRouteMatchesSession && !freeRouteMatchesPending)) {
+    label.textContent = BROWSER_FREE_LABEL;
+    label.title = 'Free model · runs on this device';
+    return;
+  }
   let modelId = null;
   if (s && s.model) {
     modelId = s.model;

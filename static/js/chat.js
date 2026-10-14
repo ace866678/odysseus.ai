@@ -1376,13 +1376,22 @@ import { invalidateSettings } from './appConfig.js';
   // SmolLM2 runs on the user's device; weights are downloaded from Hugging Face
   // on first use and cached by the browser, so Railway does not need model RAM.
   let _browserAIHistory = [];
-  async function _tryBrowserAI(message, releaseSendFlag) {
-    let selectedModel = '';
+  const _FREE_ROUTE_KEY = 'ody-free-model-route';
+  function _readSelectedFreeRoute() {
     try {
-      const savedBrowserModel = localStorage.getItem('ody-browser-ai-model');
-      selectedModel = savedBrowserModel === null ? 'smollm2-local' : savedBrowserModel;
-    } catch (_) { selectedModel = 'smollm2-local'; }
-    const useLocalModel = selectedModel === 'smollm2-local';
+      const route = JSON.parse(localStorage.getItem(_FREE_ROUTE_KEY) || 'null');
+      return route && typeof route === 'object' ? route : null;
+    } catch (_) { return null; }
+  }
+  function _freeRouteMatchesSelected(route, selected) {
+    return !!(route && route.type === 'server' && selected
+      && route.model === (selected.model || '')
+      && route.url === (selected.endpoint_url || ''));
+  }
+  async function _tryBrowserAI(message, releaseSendFlag) {
+    // Strict free-only fallback: never use an unknown browser-hosted API model.
+    const selectedModel = 'smollm2-local';
+    const useLocalModel = true;
     if (!useLocalModel && (!window.puter || !window.puter.ai || typeof window.puter.ai.chat !== 'function')) return false;
     const input = uiModule.el('message');
     if (input) {
@@ -2092,6 +2101,24 @@ import { invalidateSettings } from './appConfig.js';
         return { model: '', endpoint_url: '', endpoint_id: '', source: '' };
       }
     })();
+
+    // Never silently send through a paid/unknown endpoint left over from an older
+    // session or server default. Only a free route explicitly picked from the
+    // filtered catalog may use server inference; otherwise run local SmolLM2.
+    const selectedFreeRoute = _readSelectedFreeRoute();
+    const selectedServerRouteIsFree = _freeRouteMatchesSelected(selectedFreeRoute, selectedRouteForSend);
+    if (!selectedServerRouteIsFree) {
+      const hasAttachments = !!(fileHandlerModule.getPendingCount()
+        || (_pendingRegenAttachments && _pendingRegenAttachments.length));
+      if (!approvalForSend && !hasAttachments) {
+        if (await _tryBrowserAI(msg, _releaseSendFlag)) return;
+      }
+      uiModule.showError(hasAttachments
+        ? 'Free-only mode: attachments are not supported by the on-device fallback yet. Select a verified free server model to send attachments.'
+        : 'Free-only mode: choose a verified free server model or use SmolLM2 on this device. No paid endpoint was called.');
+      _releaseSendFlag();
+      return;
+    }
 
     // Materialize pending session (deferred from model click) on first message
     if (sessionModule.hasPendingChat && sessionModule.hasPendingChat()) {

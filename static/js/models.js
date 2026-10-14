@@ -19,6 +19,60 @@ let _lastFetchTime = 0;
 let _fetchInflight = null;
 let _fetchSeq = 0;
 const _FETCH_CACHE_TTL = 30000; // 30s client-side cache for /api/models
+
+function _isZeroPrice(value) {
+  if (typeof value === 'number') return Number.isFinite(value) && value === 0;
+  if (typeof value !== 'string') return false;
+  const normalized = value.trim().replace(/[\s$,]/g, '').replace(/\/(?:m|1m|million|token|tokens)$/i, '');
+  return /^(?:0+(?:\.0+)?|0e[+-]?\d+)$/i.test(normalized);
+}
+
+function _hasExplicitFreePricing(item, modelId) {
+  const metadata = item?.models_metadata?.[modelId];
+  if (!metadata || typeof metadata !== 'object') return false;
+  if (metadata.free === true || metadata.is_free === true || metadata.isFree === true) return true;
+  const pricing = metadata.pricing || metadata.prices || metadata.cost || metadata;
+  if (!pricing || typeof pricing !== 'object') return false;
+  const input = pricing.prompt ?? pricing.input ?? pricing.input_cost ?? pricing.inputCost ?? pricing.prompt_cost;
+  const output = pricing.completion ?? pricing.output ?? pricing.output_cost ?? pricing.outputCost ?? pricing.completion_cost;
+  return input !== undefined && output !== undefined && _isZeroPrice(input) && _isZeroPrice(output);
+}
+
+function _isKnownFreeModel(item, modelId) {
+  const mid = String(modelId || '').trim().toLowerCase();
+  if (!mid) return false;
+  const category = String(item?.category || '').toLowerCase();
+  const kind = String(item?.endpoint_kind || item?.endpointKind || '').toLowerCase();
+  if (category === 'local' || kind === 'local') return true;
+  if (_hasExplicitFreePricing(item, modelId)) return true;
+  let host = '';
+  try { host = new URL(item?.url || item?.base_url || '', window.location.origin).hostname.toLowerCase(); } catch (_) {}
+  const isOpenRouter = host === 'openrouter.ai' || host.endsWith('.openrouter.ai');
+  return isOpenRouter && (mid === 'openrouter/free' || mid.endsWith(':free'));
+}
+
+function _freeOnlyItems(items) {
+  return (Array.isArray(items) ? items : []).map(item => {
+    const filterList = (ids, labels) => (Array.isArray(ids) ? ids : [])
+      .map((id, index) => ({ id, label: (Array.isArray(labels) && labels[index]) || id }))
+      .filter(entry => _isKnownFreeModel(item, entry.id));
+    const primary = filterList(item.models, item.models_display);
+    const extras = filterList(item.models_extra, item.models_extra_display);
+    const visible = new Set(primary.concat(extras).map(entry => entry.id));
+    const metadata = {};
+    Object.entries(item.models_metadata || {}).forEach(([id, value]) => {
+      if (visible.has(id)) metadata[id] = value;
+    });
+    return {
+      ...item,
+      models: primary.map(entry => entry.id),
+      models_display: primary.map(entry => entry.label),
+      models_extra: extras.map(entry => entry.id),
+      models_extra_display: extras.map(entry => entry.label),
+      models_metadata: metadata,
+    };
+  }).filter(item => (item.models || []).length + (item.models_extra || []).length > 0);
+}
 const COLLAPSE_KEY = 'odysseus-models-collapsed';
 const FAVORITES_KEY = 'odysseus-model-favorites';
 const USAGE_KEY = 'odysseus-model-usage';
@@ -77,14 +131,14 @@ function _setSortMode(mode) {
  * Build a single model row element.
  */
 function _startChat(url, mid, endpointId) {
-  // Block model switching while compare mode is active
+  // Block model switching while compare mode is active.
   if (window.compareModule && window.compareModule.isActive()) return;
   _trackUsage(mid);
-  if (sessionModule) {
-    sessionModule.createDirectChat(url, mid, endpointId);
-  } else if (uiModule) {
-    uiModule.showError('Session module not loaded');
-  }
+  // Route through the chat picker's validated/deferred switch path. This keeps
+  // the current transcript visible and only materializes a new session on Send.
+  document.dispatchEvent(new CustomEvent('odysseus:select-free-model', {
+    detail: { url: url || '', modelId: mid || '', endpointId: endpointId || '' },
+  }));
 }
 
 function _buildModelRow(mid, url, displayName, endpointId, offline, modelType) {
@@ -218,7 +272,7 @@ export async function refreshModels(force = false, opts = {}) {
       const { data, seq } = await _fetchInflight;
       if (seq < _fetchSeq) return;
       _lastFetchTime = Date.now();
-      _cachedItems = data.items || [];
+      _cachedItems = _freeOnlyItems(data.items || []);
     } catch (e) {
       console.warn('[Odysseus models] Server model list unavailable; showing the built-in browser model instead.', e);
       // Never leave the Models panel spinning forever. If the server model
@@ -588,14 +642,13 @@ export async function refreshModels(force = false, opts = {}) {
     if (!_cachedItems || _cachedItems.length === 0) {
       const noModels = document.createElement('div');
       noModels.className = 'models-empty-state';
-      noModels.innerHTML = '<span class="muted">No server models are configured</span><br>'
-        + '<span class="muted-sm">Odysseus will try browser AI directly in chat. Free access may require provider authorization; model availability can change.</span>'
+      noModels.innerHTML = '<span class="muted">No free server models are available</span><br>'
+        + '<span class="muted-sm">Unverified-price and paid endpoints are hidden from chat. SmolLM2 runs locally on your device at no API cost; first use downloads about 273 MB.</span>'
         + '<div style="margin-top:10px;text-align:left">'
-        + '<label for="ody-browser-ai-model" class="muted-sm">Browser AI model</label>'
+        + '<label for="ody-browser-ai-model" class="muted-sm">Free browser model</label>'
         + '<select id="ody-browser-ai-model" style="width:100%;margin-top:5px">'
-        + '<option value="smollm2-local">SmolLM2 · On-device (download ~273 MB)</option>'
-        + '<option value="">Puter default model</option>'
-        + '</select><div class="muted-sm" id="ody-browser-ai-model-status" style="margin-top:5px">SmolLM2 runs on-device; Puter models load if available.</div></div>'
+        + '<option value="smollm2-local">SmolLM2 · On-device (free)</option>'
+        + '</select><div class="muted-sm" id="ody-browser-ai-model-status" style="margin-top:5px">Runs on this device; no hosted model API key is used.</div></div>'
 
         + (window._isAdmin ? `
           <hr style="margin:12px 0;border-color:var(--border);">
@@ -619,53 +672,13 @@ export async function refreshModels(force = false, opts = {}) {
       box.appendChild(noModels);
       const browserModelSelect = noModels.querySelector('#ody-browser-ai-model');
       if (browserModelSelect) {
-        try {
-          const savedBrowserModel = localStorage.getItem('ody-browser-ai-model') || 'smollm2-local';
-          browserModelSelect.value = savedBrowserModel;
-          if (!localStorage.getItem('ody-browser-ai-model')) localStorage.setItem('ody-browser-ai-model', savedBrowserModel);
-        } catch (_) { browserModelSelect.value = 'smollm2-local'; }
+        try { localStorage.setItem('ody-browser-ai-model', 'smollm2-local'); } catch (_) {}
+        browserModelSelect.value = 'smollm2-local';
         browserModelSelect.addEventListener('change', () => {
-          try { localStorage.setItem('ody-browser-ai-model', browserModelSelect.value); } catch (_) {}
-          uiModule.showToast('Browser AI model preference saved');
+          try { localStorage.setItem('ody-browser-ai-model', 'smollm2-local'); } catch (_) {}
+          uiModule.showToast('Using free on-device SmolLM2');
         });
-        const modelStatus = noModels.querySelector('#ody-browser-ai-model-status');
-        if (window.puter?.ai?.listModels) {
-          window.puter.ai.listModels().then((catalog) => {
-            const items = Array.isArray(catalog) ? catalog : (catalog?.models || catalog?.items || catalog?.data || []);
-            const normalized = items.map((item) => {
-              if (typeof item === 'string') return { id: item, label: item };
-              const id = String(item?.id || item?.model || item?.name || '').trim();
-              const name = String(item?.name || item?.label || id).trim();
-              const provider = String(item?.provider || item?.vendor || '').trim();
-              return id ? { id, label: provider && !name.toLowerCase().includes(provider.toLowerCase()) ? name + ' · ' + provider : name } : null;
-            }).filter(Boolean);
-            const seen = new Set();
-            const unique = normalized.filter(item => !seen.has(item.id) && seen.add(item.id));
-            if (!unique.length) {
-              if (modelStatus) modelStatus.textContent = 'Use the default model; the provider catalog was unavailable.';
-              return;
-            }
-            const saved = browserModelSelect.value;
-            browserModelSelect.replaceChildren(
-              new Option('SmolLM2 · On-device (download ~273 MB)', 'smollm2-local'),
-              new Option('Puter default model', '')
-            );
-            unique.slice(0, 100).forEach(item => browserModelSelect.add(new Option(item.label, item.id)));
-            if (saved === '') browserModelSelect.value = '';
-            else if (saved === 'smollm2-local' || (saved && unique.some(item => item.id === saved))) browserModelSelect.value = saved;
-            else if (saved) {
-              try { localStorage.setItem('ody-browser-ai-model', 'smollm2-local'); } catch (_) {}
-              browserModelSelect.value = 'smollm2-local';
-            }
-            if (modelStatus) modelStatus.textContent = unique.length + ' models found · availability and free access depend on the provider.';
-          }).catch(() => {
-            if (modelStatus) modelStatus.textContent = 'Could not load the live catalog. The default model is still available to try.';
-          });
-        } else if (modelStatus) {
-          modelStatus.textContent = 'SmolLM2 is available on-device; the optional Puter model catalog could not load.';
-        }
       }
-
       // Provider preset handler
       const presetSelect = noModels.querySelector('#ody-provider-preset');
       const presetHint = noModels.querySelector('#ody-provider-preset-hint');

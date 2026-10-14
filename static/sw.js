@@ -7,7 +7,7 @@
 //   - Other static assets (images/fonts/libs): cache-first with bg refresh.
 //   - API / non-GET: never cached.
 // Bump CACHE_NAME whenever the precache list or SW logic changes.
-const CACHE_NAME = 'solomon-ai-v1-branding-20261014';
+const CACHE_NAME = 'solomon-ai-v2-free-models-20261014';
 
 // KaTeX resolves these from its own stylesheet, so caching the CSS without them
 // gives offline math fallback glyphs instead of proper typesetting.
@@ -68,6 +68,7 @@ const PRECACHE = [
   '/static/js/markdown.js',
   '/static/js/dragSort.js',
   '/static/js/sessions.js',
+  '/static/js/modelPicker.js?v=20261014freemodelsonly1',
   '/static/js/memory.js',
   '/static/js/skills.js?v=20260909kebabconsistency1',
   '/static/js/skillsMetrics.js?v=20260908autonomousskills1',
@@ -86,7 +87,7 @@ const PRECACHE = [
   '/static/js/chatRenderer.js?v=20260914metricssummary1',
   '/static/js/codeRunner.js?v=20260831richtexttools91',
   '/static/js/chatStream.js?v=20260914pdfstrip1',
-  '/static/js/chat.js?v=20260917toolttft1',
+  '/static/js/chat.js?v=20261014freemodelsonly1',
   '/static/js/cookbook.js',
   '/static/js/search-chat.js',
   '/static/js/compare/index.js?v=20260909mobilepaneaddscroll1',

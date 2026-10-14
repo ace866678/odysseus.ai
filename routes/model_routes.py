@@ -2067,10 +2067,10 @@ def setup_model_routes(model_discovery):
         return {
             "presets": {
                 "qwen": {
-                    "name": "Qwen / DashScope",
-                    "base_url": "https://ap-southeast-1.maas.qwencloudapi.com/compatible-mode/v1",
-                    "description": "Alibaba Qwen models (Qwen3, Qwen2.5, etc.) via DashScope. Get API key from DashScope Console.",
-                    "docs_url": "https://dashscope.aliyuncs.com/",
+                    "name": "QwenCloud / DashScope",
+                    "base_url": "https://maas.qwencloudapi.com/compatible-mode/v1",
+                    "description": "QwenCloud OpenAI-compatible API. Set DASHSCOPE_API_KEY in Railway Variables or enter a key in this endpoint's API-key field.",
+                    "docs_url": "https://docs.qwencloud.com/api-reference/preparation/api-key",
                     "env_var": "DASHSCOPE_API_KEY",
                 },
                 "hf-router": {

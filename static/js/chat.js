@@ -1382,8 +1382,12 @@ import { invalidateSettings } from './appConfig.js';
       const savedBrowserModel = localStorage.getItem('ody-browser-ai-model');
       selectedModel = savedBrowserModel === null ? 'smollm2-local' : savedBrowserModel;
     } catch (_) { selectedModel = 'smollm2-local'; }
-    const useLocalModel = selectedModel === 'smollm2-local';
-    if (!useLocalModel && (!window.puter || !window.puter.ai || typeof window.puter.ai.chat !== 'function')) return false;
+    let useLocalModel = selectedModel === 'smollm2-local';
+    // If the saved provider is unavailable, never abandon the user's message:
+    // switch to the bundled on-device model as the no-key fallback.
+    if (!useLocalModel && (!window.puter || !window.puter.ai || typeof window.puter.ai.chat !== 'function')) {
+      useLocalModel = true;
+    }
     const existingHolder = options && options.existingHolder ? options.existingHolder : null;
     const input = uiModule.el('message');
     if (input) {
@@ -1414,18 +1418,28 @@ import { invalidateSettings } from './appConfig.js';
           if (body && status) body.textContent = status;
         });
       } else {
-        const transcript = _browserAIHistory.map(item =>
-          (item.role === 'user' ? 'User: ' : 'Assistant: ') + item.content
-        ).join('\n\n') + '\n\nAssistant:';
-        const response = selectedModel
-          ? await window.puter.ai.chat(transcript, { model: selectedModel })
-          : await window.puter.ai.chat(transcript);
-        if (typeof response === 'string') answer = response;
-        else if (typeof response?.message === 'string') answer = response.message;
-        else if (typeof response?.message?.content === 'string') answer = response.message.content;
-        else if (Array.isArray(response?.message?.content)) answer = response.message.content.map(part => part.text || '').join('');
-        else if (typeof response?.text === 'string') answer = response.text;
-        else if (response?.choices?.[0]?.message?.content) answer = response.choices[0].message.content;
+        try {
+          const transcript = _browserAIHistory.map(item =>
+            (item.role === 'user' ? 'User: ' : 'Assistant: ') + item.content
+          ).join('\n\n') + '\n\nAssistant:';
+          const response = selectedModel
+            ? await window.puter.ai.chat(transcript, { model: selectedModel })
+            : await window.puter.ai.chat(transcript);
+          if (typeof response === 'string') answer = response;
+          else if (typeof response?.message === 'string') answer = response.message;
+          else if (typeof response?.message?.content === 'string') answer = response.message.content;
+          else if (Array.isArray(response?.message?.content)) answer = response.message.content.map(part => part.text || '').join('');
+          else if (typeof response?.text === 'string') answer = response.text;
+          else if (response?.choices?.[0]?.message?.content) answer = response.choices[0].message.content;
+          if (!String(answer || '').trim()) throw new Error('The selected browser provider returned an empty response.');
+        } catch (providerError) {
+          console.warn('[Odysseus browser AI] Provider failed; trying on-device SmolLM2.', providerError);
+          useLocalModel = true;
+          const localModel = await import('./localModel.js?v=20261014-smollm2fallback');
+          answer = await localModel.generateResponse(_browserAIHistory.slice(-12), (status) => {
+            if (body && status) body.textContent = status;
+          });
+        }
       }
       answer = String(answer || '').trim();
       if (!answer) throw new Error('The model returned an empty response.');
@@ -1440,11 +1454,11 @@ import { invalidateSettings } from './appConfig.js';
       uiModule.scrollHistory();
     } catch (error) {
       _browserAIHistory.pop();
-      const messageText = (useLocalModel ? 'SmolLM2 could not run on this device: ' : 'Browser AI could not respond: ')
+      const messageText = (useLocalModel ? 'SmolLM2 could not run on this device: ' : 'Browser AI and its on-device fallback could not respond: ')
         + (error?.message || String(error))
         + (useLocalModel
-          ? '\n\nTry a browser with WebGPU support and enough free memory, or choose a different browser AI model in Models. The model files are downloaded from Hugging Face and cached by your browser; they are not stored in the GitHub repository.'
-          : '\n\nThe provider may require authorization or this model may be unavailable. Choose another option in Models, or configure a server provider in Admin.');
+          ? '\n\nTry a browser with WebGPU support and enough free memory. If WebGPU is unavailable, CPU mode may be slow or exceed this device’s memory. Model files are downloaded from Hugging Face and cached by your browser.'
+          : '\n\nThe provider may require authorization and the on-device fallback also failed. Choose another option in Models, or configure a server provider in Admin.');
       if (body) body.textContent = messageText;
       else addMessage('assistant', messageText, useLocalModel ? 'SmolLM2 · On-device' : 'Puter AI');
       if (answerBubble) {

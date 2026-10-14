@@ -1014,6 +1014,12 @@ def _probe_endpoint(base_url: str, api_key: str = None, timeout: int = 5) -> Lis
     For Anthropic, queries their /v1/models API, falling back to hardcoded list."""
     from src.endpoint_resolver import resolve_url
     from src.llm_core import httpx_get_kimi_aware
+    # When QwenCloud's key is supplied by Railway Variables, the admin form can
+    # leave its API-key field blank and still test/discover the configured model.
+    if not api_key:
+        host = (urlparse(base_url or "").hostname or "").lower()
+        if host == "maas.qwencloudapi.com" or host.endswith(".maas.qwencloudapi.com"):
+            api_key = os.environ.get("DASHSCOPE_API_KEY") or None
     base = resolve_url(_normalize_base(base_url))
     provider = _safe_detect_provider(base)
     if provider == "chatgpt-subscription":
@@ -2067,10 +2073,10 @@ def setup_model_routes(model_discovery):
         return {
             "presets": {
                 "qwen": {
-                    "name": "Qwen / DashScope",
-                    "base_url": "https://ap-southeast-1.maas.qwencloudapi.com/compatible-mode/v1",
-                    "description": "Alibaba Qwen models (Qwen3, Qwen2.5, etc.) via DashScope. Get API key from DashScope Console.",
-                    "docs_url": "https://dashscope.aliyuncs.com/",
+                    "name": "QwenCloud / DashScope",
+                    "base_url": "https://maas.qwencloudapi.com/compatible-mode/v1",
+                    "description": "QwenCloud OpenAI-compatible API. Set DASHSCOPE_API_KEY in Railway Variables or enter a key in this endpoint's API-key field.",
+                    "docs_url": "https://docs.qwencloud.com/api-reference/preparation/api-key",
                     "env_var": "DASHSCOPE_API_KEY",
                 },
                 "hf-router": {

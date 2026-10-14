@@ -138,7 +138,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             # Migrating to nonce-only requires templating the HTML files +
             # auditing every JS-set style attribute. Since inline styles
             # don't execute script, the residual risk is visual-only.
-response.headers["Content-Security-Policy"] = (
+            response.headers["Content-Security-Policy"] = (
                 "default-src 'self'; "
                 f"script-src 'self' 'nonce-{nonce}' 'wasm-unsafe-eval' https://cdn.jsdelivr.net https://js.puter.com https://vercel.live; "
                 "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "

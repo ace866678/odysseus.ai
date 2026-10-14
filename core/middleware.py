@@ -138,7 +138,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             # Migrating to nonce-only requires templating the HTML files +
             # auditing every JS-set style attribute. Since inline styles
             # don't execute script, the residual risk is visual-only.
-            response.headers["Content-Security-Policy"] = (
+response.headers["Content-Security-Policy"] = (
                 "default-src 'self'; "
                 f"script-src 'self' 'nonce-{nonce}' 'wasm-unsafe-eval' https://cdn.jsdelivr.net https://js.puter.com https://vercel.live; "
                 "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
@@ -149,10 +149,10 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
                 # runtime assets there. Without this connect-src entry, the
                 # browser fallback loads the JS module but cannot initialize the model.
                 # Puter.js loads from js.puter.com and may fetch from puter.com.
-                # Hugging Face model files are served from us.aws.cdn.hf.co (and other regional CDNs).
-                "connect-src 'self' https://cdn.jsdelivr.net https://js.puter.com https://puter.com https://huggingface.co https://*.huggingface.co https://*.xethub.hf.co https://us.aws.cdn.hf.co https://*.cdn.hf.co; "
+                # Hugging Face model files are served from regional CDNs (us.aws.cdn.hf.co, etc.).
+                "connect-src 'self' https://cdn.jsdelivr.net https://js.puter.com https://puter.com https://huggingface.co https://*.huggingface.co https://*.xethub.hf.co https://*.cdn.hf.co; "
                 "worker-src 'self' blob: https://cdn.jsdelivr.net https://js.puter.com; "
-                "frame-src 'self'; "
+                "frame-src 'self' https://vercel.live; "
                 "frame-ancestors 'none'"
             )
         return response

@@ -1106,6 +1106,48 @@ app.router.lifespan_context = _lifespan
 async def _startup_event():
     global upload_cleanup_task
     logger.info("Application starting up...")
+    # Register the optional AIMLAPI provider from server-side environment
+    # variables. Credentials remain in the database's encrypted field and are
+    # never sent to the browser or committed to source control.
+    _aimlapi_key = os.getenv("AIMLAPI_API_KEY", "").strip()
+    _aimlapi_base = os.getenv("AIMLAPI_BASE_URL", "https://api.aimlapi.com/v1").strip().rstrip("/")
+    if _aimlapi_key and _aimlapi_base:
+        _aimlapi_db = None
+        try:
+            from core.database import ModelEndpoint as _ModelEndpoint
+            _aimlapi_db = SessionLocal()
+            _aimlapi_ep = _aimlapi_db.query(_ModelEndpoint).filter(
+                _ModelEndpoint.id == "solomon-aimlapi"
+            ).first()
+            if _aimlapi_ep is None:
+                _aimlapi_ep = _ModelEndpoint(
+                    id="solomon-aimlapi",
+                    name="Solomon AI · AIMLAPI",
+                    base_url=_aimlapi_base,
+                    api_key=_aimlapi_key,
+                    is_enabled=True,
+                    model_type="llm",
+                    endpoint_kind="api",
+                    model_refresh_mode="auto",
+                )
+                _aimlapi_db.add(_aimlapi_ep)
+            else:
+                _aimlapi_ep.name = "Solomon AI · AIMLAPI"
+                _aimlapi_ep.base_url = _aimlapi_base
+                _aimlapi_ep.api_key = _aimlapi_key
+                _aimlapi_ep.is_enabled = True
+                _aimlapi_ep.model_type = "llm"
+                _aimlapi_ep.endpoint_kind = "api"
+                _aimlapi_ep.model_refresh_mode = "auto"
+            _aimlapi_db.commit()
+            logger.info("[provider-setup] AIMLAPI endpoint registered or refreshed")
+        except Exception as _aimlapi_error:
+            if _aimlapi_db is not None:
+                _aimlapi_db.rollback()
+            logger.warning("[provider-setup] AIMLAPI endpoint registration failed: %s", type(_aimlapi_error).__name__)
+        finally:
+            if _aimlapi_db is not None:
+                _aimlapi_db.close()
     webhook_manager.set_loop(asyncio.get_running_loop())
     # Wipe any leftover incognito sessions from previous process — they're
     # ephemeral by design and must not survive a restart.

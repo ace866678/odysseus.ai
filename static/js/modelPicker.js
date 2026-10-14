@@ -663,7 +663,9 @@ function _initModelPickerDropdown() {
 
 async function _pick(m) {
     _defaultPendingSeq++;
+    let previousLastPickedRoute = null;
     try {
+      previousLastPickedRoute = window.__odysseusLastPickedRoute || null;
       window.__odysseusLastPickedRoute = {
         model: m.mid || '',
         endpoint_url: m.url || '',
@@ -673,6 +675,19 @@ async function _pick(m) {
         session_id: _deps.getCurrentSessionId() || null,
       };
     } catch (_) {}
+
+    // Keep the previous successful route if the session update fails.
+    // chat.js consults this value when resolving the route for the next send.
+    const restoreLastPickedRoute = () => {
+      try {
+        if (previousLastPickedRoute) {
+          window.__odysseusLastPickedRoute = previousLastPickedRoute;
+        } else {
+          delete window.__odysseusLastPickedRoute;
+        }
+      } catch (_) {}
+    };
+
     let switchDone = null;
     const switchPromise = new Promise(resolve => { switchDone = resolve; });
     try { window.__odysseusModelSwitchPromise = switchPromise; } catch (_) {}
@@ -685,64 +700,84 @@ async function _pick(m) {
     const currentSessionId = _deps.getCurrentSessionId();
     const _pendingChat = _deps.getPendingChat();
 
-    // Remember this pick so it surfaces under "Recent" next time the picker
-    // opens — the whole point of quick-switch.
+    // Remember this pick so it surfaces under "Recent" next time the picker opens.
     if (m && m.mid) _pushRecent(_pickerModelKey(m) || m.mid);
 
-    // Broadcast immediately so listeners (e.g. the tour) can advance without
-    // waiting for the async session-create/PATCH that follows.
-    try { document.dispatchEvent(new CustomEvent('odysseus:model-picked', { detail: m })); } catch {}
+    try {
+      document.dispatchEvent(new CustomEvent('odysseus:model-picked', { detail: m }));
+    } catch (_) {}
 
-    // Blur search input before closing to dismiss keyboard on mobile
+    // Blur search input before closing to dismiss keyboard on mobile.
     if (document.activeElement) document.activeElement.blur();
     _close();
-    // Refocus main textarea — skip on mobile to avoid keyboard bounce
     if (window.innerWidth >= 768) {
       const _ta = document.getElementById('message');
       if (_ta) setTimeout(() => _ta.focus(), 50);
     }
+
     if (!currentSessionId && _pendingChat) {
-      // Already have a deferred session — just update the model
+      // This is still an unmaterialized new chat: update its pending route only.
       _deps.setPendingChat({ url: m.url, modelId: m.mid, endpointId: m.endpointId, source: 'manual' });
-      // Header stays as session name — model switch only updates picker
       updateModelPicker();
       uiModule.showToast(`Using ${m.display}`);
       finishSwitch();
       return;
-    } else if (!currentSessionId) {
-      // No session yet — create one with this model
+    }
+
+    if (!currentSessionId) {
+      // No persisted session is selected, so prepare a new chat. This only
+      // resets the chat area/welcome screen; it does not reload the document.
       try {
         await _deps.createDirectChat(m.url, m.mid, m.endpointId);
       } catch (e) {
+        restoreLastPickedRoute();
+        updateModelPicker();
         uiModule.showError('Failed to start chat: ' + e);
         finishSwitch();
         return;
       }
     } else {
-      // Existing session with no model — PATCH it
+      // Change the persisted route first; only update local state after a
+      // successful PATCH, so failed requests cannot make picker/send disagree.
       const sessions = _deps.getSessions();
       const s = sessions.find(x => x.id === currentSessionId);
-      if (s) { s.model = m.mid; s.endpoint_url = m.url; s.endpoint_id = m.endpointId || ''; s.endpoint_name = m.epName || ''; }
-      updateModelPicker();
       const fd = new FormData();
       fd.append('model', m.mid);
       fd.append('endpoint_url', m.url);
       if (m.endpointId) fd.append('endpoint_id', m.endpointId);
       try {
-        const res = await fetch(`${API_BASE}/api/session/${currentSessionId}`, { method: 'PATCH', body: fd });
+        const res = await fetch(`${API_BASE}/api/session/${currentSessionId}`, {
+          method: 'PATCH',
+          body: fd,
+          credentials: 'same-origin',
+        });
         if (!res.ok) {
-          uiModule.showError('Failed to set model');
+          restoreLastPickedRoute();
+          updateModelPicker();
+          let detail = '';
+          try {
+            const payload = await res.clone().json();
+            detail = payload?.detail ? `: ${payload.detail}` : '';
+          } catch (_) {}
+          uiModule.showError('Failed to set model' + detail);
           finishSwitch();
           return;
         }
-        // Header stays as session name — model info shown in picker only
+        if (s) {
+          s.model = m.mid;
+          s.endpoint_url = m.url;
+          s.endpoint_id = m.endpointId || '';
+          s.endpoint_name = m.epName || '';
+        }
       } catch (e) {
+        restoreLastPickedRoute();
+        updateModelPicker();
         uiModule.showError('Failed to set model: ' + e);
         finishSwitch();
         return;
       }
     }
-    // Update picker visibility — model is now set
+
     updateModelPicker();
     if (window.refreshChatContextHeader) window.refreshChatContextHeader('model-pick');
     uiModule.showToast(`Using ${m.display}`);

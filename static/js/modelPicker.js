@@ -866,6 +866,22 @@ async function _pick(m) {
     finishSwitch();
   }
 
+  document.addEventListener('odysseus:select-free-model', (e) => {
+    const detail = (e && e.detail) || {};
+    const targetModel = String(detail.modelId || '');
+    const targetUrl = String(detail.url || '');
+    const targetEndpointId = String(detail.endpointId || '');
+    const match = _getAllModels().find(model => !model.browserOnly
+      && model.mid === targetModel
+      && (model.url || '') === targetUrl
+      && (!targetEndpointId || String(model.endpointId || '') === targetEndpointId));
+    if (!match) {
+      uiModule.showError('That model is no longer available as a verified free model. Choose another free model.');
+      return;
+    }
+    _pick(match);
+  });
+
   document.addEventListener('odysseus:auto-select-model', async (e) => {
     const detail = (e && e.detail) || {};
     const currentSessionId = _deps.getCurrentSessionId();

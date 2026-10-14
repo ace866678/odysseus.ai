@@ -670,7 +670,15 @@ export async function refreshModels(force = false, opts = {}) {
         ` : '<div style="margin-top:8px"><a href="#" onclick="document.getElementById(\'user-bar-admin\')?.click();return false;" class="accent-link">Configure a server provider in Admin</a></div>');
 
       box.appendChild(noModels);
-remove unverified browser model catalog
+      const browserModelSelect = noModels.querySelector('#ody-browser-ai-model');
+      if (browserModelSelect) {
+        try { localStorage.setItem('ody-browser-ai-model', 'smollm2-local'); } catch (_) {}
+        browserModelSelect.value = 'smollm2-local';
+        browserModelSelect.addEventListener('change', () => {
+          try { localStorage.setItem('ody-browser-ai-model', 'smollm2-local'); } catch (_) {}
+          uiModule.showToast('Using free on-device SmolLM2');
+        });
+      }
       // Provider preset handler
       const presetSelect = noModels.querySelector('#ody-provider-preset');
       const presetHint = noModels.querySelector('#ody-provider-preset-hint');

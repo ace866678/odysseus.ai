@@ -140,7 +140,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             # don't execute script, the residual risk is visual-only.
             response.headers["Content-Security-Policy"] = (
                 "default-src 'self'; "
-                f"script-src 'self' 'nonce-{nonce}' 'wasm-unsafe-eval' https://cdn.jsdelivr.net; "
+                f"script-src 'self' 'nonce-{nonce}' 'wasm-unsafe-eval' https://cdn.jsdelivr.net https://js.puter.com https://vercel.live; "
                 "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
                 "font-src 'self' https://cdn.jsdelivr.net; "
                 "img-src 'self' data: blob: https:; "
@@ -148,8 +148,8 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
                 # Transformers.js is imported from jsDelivr and fetches its ONNX
                 # runtime assets there. Without this connect-src entry, the
                 # browser fallback loads the JS module but cannot initialize the model.
-                "connect-src 'self' https://cdn.jsdelivr.net https://huggingface.co https://*.huggingface.co https://*.xethub.hf.co; "
-                "worker-src 'self' blob: https://cdn.jsdelivr.net; "
+                "connect-src 'self' https://cdn.jsdelivr.net https://js.puter.com https://huggingface.co https://*.huggingface.co https://*.xethub.hf.co https://us.aws.cdn.hf.co https://*.cdn.hf.co; "
+                "worker-src 'self' blob: https://cdn.jsdelivr.net https://js.puter.com; "
                 "frame-src 'self'; "
                 "frame-ancestors 'none'"
             )

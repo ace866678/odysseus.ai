@@ -7,7 +7,7 @@
 //   - Other static assets (images/fonts/libs): cache-first with bg refresh.
 //   - API / non-GET: never cached.
 // Bump CACHE_NAME whenever the precache list or SW logic changes.
-const CACHE_NAME = 'odysseus-v658-publication-assets-restore';
+const CACHE_NAME = 'solomon-ai-v1-branding-20261014';
 
 // KaTeX resolves these from its own stylesheet, so caching the CSS without them
 // gives offline math fallback glyphs instead of proper typesetting.
@@ -39,7 +39,7 @@ const KATEX_FONTS = [
 // exact URL the browser requests, query string included.
 const PRECACHE = [
   '/',
-  '/static/css/00-tokens.css?v=20260929csssplit',
+  '/static/css/00-tokens.css?v=20261014solomonbrand1',
   '/static/css/01-agent-chat.css?v=20260929csssplit',
   '/static/css/02-compare.css?v=20260929csssplit',
   '/static/css/03-agent-chat.css?v=20260929csssplit',
@@ -60,7 +60,7 @@ const PRECACHE = [
   '/static/css/documents-gallery-editor.css?v=20260929csssplit',
   '/static/css/email-calendar-notes-tasks.css?v=20260929csssplit',
   '/static/css/cookbook-research-memory-settings.css?v=20260929csssplit',
-  '/static/app.js?v=20260929csssplit',
+  '/static/app.js?v=20261014solomonbrand1',
   '/static/js/storage.js',
   '/static/js/appConfig.js',
   '/static/js/ui.js?v=20260916largetoolscroll1',
@@ -92,7 +92,7 @@ const PRECACHE = [
   '/static/js/compare/vote.js?v=20260828resendcaldrag1',
   '/static/js/colorPicker.js?v=20260910eyedropper1',
   '/static/js/panels.js?v=20260909movepicklayer1',
-  '/static/js/theme.js?v=20260911organsrain1',
+  '/static/js/theme.js?v=20261014solomonbrand1',
   '/static/js/censor.js',
   '/static/js/settings.js?v=20260912writingstyle3',
   '/static/js/admin.js?v=20260929csssplit',

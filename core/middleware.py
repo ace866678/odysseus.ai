@@ -145,7 +145,11 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
                 "font-src 'self' https://cdn.jsdelivr.net; "
                 "img-src 'self' data: blob: https:; "
                 "media-src 'self' blob:; "
-                "connect-src 'self' https://huggingface.co https://*.huggingface.co https://*.xethub.hf.co; "
+                # Transformers.js is imported from jsDelivr and fetches its ONNX
+                # runtime assets there. Without this connect-src entry, the
+                # browser fallback loads the JS module but cannot initialize the model.
+                "connect-src 'self' https://cdn.jsdelivr.net https://huggingface.co https://*.huggingface.co https://*.xethub.hf.co; "
+                "worker-src 'self' blob: https://cdn.jsdelivr.net; "
                 "frame-src 'self'; "
                 "frame-ancestors 'none'"
             )

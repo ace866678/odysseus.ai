@@ -1,0 +1,4 @@
+# Custom labels used by our registered self-hosted GPU runners.
+self-hosted-runner:
+  labels:
+    - gpu

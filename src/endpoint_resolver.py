@@ -188,6 +188,15 @@ def resolve_endpoint_runtime(ep, owner: Optional[str] = None) -> Tuple[str, Opti
             normalize_base(creds.get("base_url") or base)
         )
         api_key = creds.get("api_key")
+
+    # Let cloud deployments keep QwenCloud credentials in their secret manager
+    # instead of committing them or copying them into every endpoint record.
+    # An explicitly configured endpoint key always takes precedence.
+    if not api_key and not auth_id:
+        host = (urlparse(base).hostname or "").lower()
+        if host == "maas.qwencloudapi.com" or host.endswith(".maas.qwencloudapi.com"):
+            api_key = os.environ.get("DASHSCOPE_API_KEY") or None
+
     return base, api_key
 
 

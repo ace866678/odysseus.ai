@@ -3784,7 +3784,47 @@ function startOdysseusApp() {
   }
 
   // Initialize all event listeners
-  try { initializeEventListeners(); } catch(e) { console.error('Event init error:', e); }
+  try { initializeEventListeners(); } catch(e) {
+    console.error('Event init error:', e);
+    window.__odysseusInitError = String(e && (e.stack || e.message) || e);
+  }
+
+  // Emergency send hook: initializeEventListeners contains many unrelated UI
+  // listeners. If any earlier listener setup throws, the send button must
+  // still submit the chat instead of silently doing nothing.
+  const _recoverySendBtn = document.querySelector('.send-btn');
+  if (_recoverySendBtn && !_recoverySendBtn.dataset.odysseusClickHandler) {
+    _recoverySendBtn.dataset.odysseusClickHandler = 'recovery';
+    _recoverySendBtn.addEventListener('click', (event) => {
+      event.preventDefault();
+      const input = document.getElementById('message') || document.getElementById('message-input');
+      const text = input && input.value ? input.value.trim() : '';
+      const hasFiles = !!(fileHandlerModule.getPendingCount && fileHandlerModule.getPendingCount() > 0);
+      if (!text && !hasFiles) {
+        if (input) input.focus();
+        return;
+      }
+      const form = document.getElementById('chat-form');
+      try {
+        if (form && typeof form.requestSubmit === 'function' && typeof form.onsubmit === 'function') {
+          form.requestSubmit();
+          return;
+        }
+      } catch (error) {
+        console.warn('[Odysseus] Form submit recovery failed; using chat handler.', error);
+      }
+      if (chatModule && typeof chatModule.handleChatSubmit === 'function') {
+        Promise.resolve(chatModule.handleChatSubmit(event)).catch(error => {
+          console.error('[Odysseus] Recovered chat submit failed:', error);
+          if (uiModule && uiModule.showError) uiModule.showError('Could not send message: ' + (error.message || error));
+        });
+      } else {
+        console.error('[Odysseus] No chat submit handler is available.');
+        if (uiModule && uiModule.showError) uiModule.showError('Chat could not start. Refresh the page and try again.');
+      }
+    });
+    console.warn('[Odysseus] Installed emergency send-button handler after event initialization failed.');
+  }
 
   // Reveal the toolbar now that all toggle/overflow state is resolved
   // (hidden via inline style="visibility:hidden" in HTML to prevent FOUC)
@@ -4082,6 +4122,9 @@ function startOdysseusApp() {
   }
 
   if (sendBtn) {
+    // Mark the primary click handler so the independent recovery hook below
+    // can safely attach only when initialization stopped before reaching here.
+    sendBtn.dataset.odysseusClickHandler = 'primary';
     sendBtn.addEventListener('click', (e) => {
       e.preventDefault();
 

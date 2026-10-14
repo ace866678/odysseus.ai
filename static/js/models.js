@@ -596,7 +596,25 @@ export async function refreshModels(force = false, opts = {}) {
         + '<option value="smollm2-local">SmolLM2 · On-device (download ~273 MB)</option>'
         + '<option value="">Puter default model</option>'
         + '</select><div class="muted-sm" id="ody-browser-ai-model-status" style="margin-top:5px">SmolLM2 runs on-device; Puter models load if available.</div></div>'
-        + (window._isAdmin ? '<div style="margin-top:8px"><a href="#" onclick="document.getElementById(\'user-bar-admin\')?.click();return false;" class="accent-link">Configure a server provider in Admin</a></div>' : '');
+
+        + (window._isAdmin ? `
+          <hr style="margin:12px 0;border-color:var(--border);">
+          <div style="margin-top:8px">
+            <label class="muted-sm" for="ody-provider-preset">Quick-add a provider</label>
+            <select id="ody-provider-preset" style="width:100%;margin-top:5px">
+              <option value="">— Select a provider preset —</option>
+              <option value="qwen">Qwen / DashScope (Alibaba) — ap-southeast-1</option>
+              <option value="hf-router">Hugging Face Router — Free tier available</option>
+              <option value="openrouter">OpenRouter — 100+ models</option>
+              <option value="together">Together AI — Fast inference</option>
+              <option value="groq">Groq — Ultra-fast inference</option>
+              <option value="fireworks">Fireworks AI — NVIDIA Nemotron, Llama</option>
+              <option value="deepseek">DeepSeek — DeepSeek-V3, R1</option>
+              <option value="custom">Custom OpenAI-compatible endpoint…</option>
+            </select>
+            <div class="muted-sm" id="ody-provider-preset-hint" style="margin-top:5px"></div>
+          </div>
+        ` : '<div style="margin-top:8px"><a href="#" onclick="document.getElementById(\'user-bar-admin\')?.click();return false;" class="accent-link">Configure a server provider in Admin</a></div>');
 
       box.appendChild(noModels);
       const browserModelSelect = noModels.querySelector('#ody-browser-ai-model');
@@ -647,6 +665,103 @@ export async function refreshModels(force = false, opts = {}) {
           modelStatus.textContent = 'SmolLM2 is available on-device; the optional Puter model catalog could not load.';
         }
       }
+
+      // Provider preset handler
+      const presetSelect = noModels.querySelector('#ody-provider-preset');
+      const presetHint = noModels.querySelector('#ody-provider-preset-hint');
+      if (presetSelect && presetHint) {
+        // Load presets from server
+        fetch(`${API_BASE}/api/provider-presets`, { credentials: 'same-origin' })
+          .then(r => r.ok ? r.json() : Promise.reject())
+          .then(data => {
+            const presets = data?.presets || {};
+            Object.entries(presets).forEach(([key, preset]) => {
+              const opt = document.createElement('option');
+              opt.value = key;
+              opt.textContent = preset.name;
+              presetSelect.appendChild(opt);
+            });
+            // Add custom option at the end
+            const customOpt = document.createElement('option');
+            customOpt.value = 'custom';
+            customOpt.textContent = 'Custom OpenAI-compatible endpoint…';
+            presetSelect.appendChild(customOpt);
+          })
+          .catch(() => {
+            // Fallback to built-in presets if server endpoint unavailable
+            const FALLBACK_PRESETS = {
+              'qwen': { name: 'Qwen / DashScope', base_url: 'https://ap-southeast-1.maas.qwencloudapi.com/compatible-mode/v1', hint: 'Get API key from <a href="https://dashscope.aliyuncs.com/" target="_blank">DashScope Console</a>. Set as DASHSCOPE_API_KEY or paste directly.' },
+              'hf-router': { name: 'Hugging Face Router', base_url: 'https://router.huggingface.co/v1', hint: 'Requires <a href="https://huggingface.co/settings/tokens" target="_blank">HF_TOKEN</a> with inference permissions. Free tier available.' },
+              'openrouter': { name: 'OpenRouter', base_url: 'https://openrouter.ai/api/v1', hint: 'Get key from <a href="https://openrouter.ai/keys" target="_blank">OpenRouter Keys</a>. Access 100+ models.' },
+              'together': { name: 'Together AI', base_url: 'https://api.together.xyz/v1', hint: 'Get key from <a href="https://api.together.xyz/settings/api-keys" target="_blank">Together AI</a>. $1 free credit.' },
+              'groq': { name: 'Groq', base_url: 'https://api.groq.com/openai/v1', hint: 'Get key from <a href="https://console.groq.com/keys" target="_blank">Groq Console</a>. Free tier: 14.4K req/day.' },
+              'fireworks': { name: 'Fireworks AI', base_url: 'https://api.fireworks.ai/inference/v1', hint: 'Get key from <a href="https://fireworks.ai/account/api-keys" target="_blank">Fireworks</a>. Nemotron, Llama models.' },
+              'deepseek': { name: 'DeepSeek', base_url: 'https://api.deepseek.com/v1', hint: 'Get key from <a href="https://platform.deepseek.com/api_keys" target="_blank">DeepSeek Platform</a>. V3, R1 models.' },
+            };
+            Object.entries(FALLBACK_PRESETS).forEach(([key, preset]) => {
+              const opt = document.createElement('option');
+              opt.value = key;
+              opt.textContent = preset.name;
+              presetSelect.appendChild(opt);
+            });
+            const customOpt = document.createElement('option');
+            customOpt.value = 'custom';
+            customOpt.textContent = 'Custom OpenAI-compatible endpoint…';
+            presetSelect.appendChild(customOpt);
+          });
+
+        presetSelect.addEventListener('change', () => {
+          const val = presetSelect.value;
+          if (!val) {
+            presetHint.innerHTML = '';
+            return;
+          }
+          if (val === 'custom') {
+            // Open admin panel model endpoint form
+            const adminBtn = document.getElementById('user-bar-admin');
+            if (adminBtn) adminBtn.click();
+            // Try to open model endpoints tab
+            setTimeout(() => {
+              const modelsTab = document.querySelector('[data-tab="models"]');
+              if (modelsTab) modelsTab.click();
+              setTimeout(() => {
+                const addBtn = document.getElementById('add-model-endpoint-btn') || document.querySelector('[onclick*="addModelEndpoint"]');
+                if (addBtn) addBtn.click();
+              }, 200);
+            }, 200);
+            presetHint.innerHTML = 'Opened Admin → Models. Fill in your custom endpoint URL and API key.';
+            return;
+          }
+          // Try to get preset details from server first
+          fetch(`${API_BASE}/api/provider-presets`, { credentials: 'same-origin' })
+            .then(r => r.ok ? r.json() : Promise.reject())
+            .then(data => {
+              const presets = data?.presets || {};
+              const preset = presets[val];
+              if (!preset) return;
+              // Open admin panel and pre-fill the form
+              const adminBtn = document.getElementById('user-bar-admin');
+              if (adminBtn) adminBtn.click();
+              setTimeout(() => {
+                const modelsTab = document.querySelector('[data-tab="models"]');
+                if (modelsTab) modelsTab.click();
+                setTimeout(() => {
+                  const addBtn = document.getElementById('add-model-endpoint-btn') || document.querySelector('[onclick*="addModelEndpoint"]');
+                  if (addBtn) addBtn.click();
+                  setTimeout(() => {
+                    const nameInput = document.getElementById('model-endpoint-name');
+                    const urlInput = document.getElementById('model-endpoint-base_url');
+                    if (nameInput) nameInput.value = preset.name;
+                    if (urlInput) urlInput.value = preset.base_url;
+                  }, 200);
+                }, 200);
+              }, 200);
+              presetHint.innerHTML = `${preset.name} selected. <strong>Paste your API key</strong> in the Admin → Models form. ${preset.description} <a href="${preset.docs_url}" target="_blank">Get API key</a>.`;
+            })
+            .catch(() => {
+              presetHint.innerHTML = 'Could not load preset details. Please configure manually in Admin → Models.';
+            });
+        });
       }
     }
   } catch (e) {

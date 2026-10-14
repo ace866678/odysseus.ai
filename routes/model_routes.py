@@ -2060,6 +2060,64 @@ def setup_model_routes(model_discovery):
         _providers_cache["time"] = now
         return result
 
+    @router.get("/provider-presets")
+    def provider_presets(request: Request):
+        """Get available provider presets for quick configuration."""
+        require_admin(request)
+        return {
+            "presets": {
+                "qwen": {
+                    "name": "Qwen / DashScope",
+                    "base_url": "https://ap-southeast-1.maas.qwencloudapi.com/compatible-mode/v1",
+                    "description": "Alibaba Qwen models (Qwen3, Qwen2.5, etc.) via DashScope. Get API key from DashScope Console.",
+                    "docs_url": "https://dashscope.aliyuncs.com/",
+                    "env_var": "DASHSCOPE_API_KEY",
+                },
+                "hf-router": {
+                    "name": "Hugging Face Router",
+                    "base_url": "https://router.huggingface.co/v1",
+                    "description": "Free tier access to 100+ open models via HF Inference. Requires HF_TOKEN with inference permissions.",
+                    "docs_url": "https://huggingface.co/settings/tokens",
+                    "env_var": "HF_TOKEN",
+                },
+                "openrouter": {
+                    "name": "OpenRouter",
+                    "base_url": "https://openrouter.ai/api/v1",
+                    "description": "Unified API for 100+ models (GPT, Claude, Llama, etc.). Get key from OpenRouter Keys.",
+                    "docs_url": "https://openrouter.ai/keys",
+                    "env_var": "OPENROUTER_API_KEY",
+                },
+                "together": {
+                    "name": "Together AI",
+                    "base_url": "https://api.together.xyz/v1",
+                    "description": "Fast inference for open models. $1 free credit on signup.",
+                    "docs_url": "https://api.together.xyz/settings/api-keys",
+                    "env_var": "TOGETHER_API_KEY",
+                },
+                "groq": {
+                    "name": "Groq",
+                    "base_url": "https://api.groq.com/openai/v1",
+                    "description": "Ultra-fast inference (LPU). Free tier: 14.4K requests/day.",
+                    "docs_url": "https://console.groq.com/keys",
+                    "env_var": "GROQ_API_KEY",
+                },
+                "fireworks": {
+                    "name": "Fireworks AI",
+                    "base_url": "https://api.fireworks.ai/inference/v1",
+                    "description": "NVIDIA Nemotron, Llama, and other optimized models.",
+                    "docs_url": "https://fireworks.ai/account/api-keys",
+                    "env_var": "FIREWORKS_API_KEY",
+                },
+                "deepseek": {
+                    "name": "DeepSeek",
+                    "base_url": "https://api.deepseek.com/v1",
+                    "description": "DeepSeek-V3, R1 reasoning models.",
+                    "docs_url": "https://platform.deepseek.com/api_keys",
+                    "env_var": "DEEPSEEK_API_KEY",
+                },
+            }
+        }
+
     @router.get("/discover")
     def discover_local(request: Request):
         """Scan local network for model servers on common ports."""

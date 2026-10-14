@@ -1434,7 +1434,13 @@ import { invalidateSettings } from './appConfig.js';
       const messageText = (useLocalModel ? 'SmolLM2 could not run on this device: ' : 'Browser AI could not respond: ')
         + (error?.message || String(error))
         + (useLocalModel
-          ? '\n\nTry a browser with WebGPU support and enough free memory, or choose a different browser AI model in Models. The model files are downloaded from Hugging Face and cached by your browser; they are not stored in the GitHub repository.'
+          ? '\n\nTroubleshooting:\n' +
+            '• Force-refresh the page (Ctrl+Shift+R) to clear any cached CSP\n' +
+            '• Check browser console (F12) for "Content Security Policy" errors\n' +
+            '• The deployment must allow https://cdn.jsdelivr.net in connect-src and worker-src\n' +
+            '• Try a browser with WebGPU support and enough free memory\n' +
+            '• Or choose "Puter default model" in the Models panel\n' +
+            '• Model files are downloaded from Hugging Face and cached by your browser; they are not stored in the GitHub repository.'
           : '\n\nThe provider may require authorization or this model may be unavailable. Choose another option in Models, or configure a server provider in Admin.');
       if (body) body.textContent = messageText;
       else addMessage('assistant', messageText, useLocalModel ? 'SmolLM2 · On-device' : 'Puter AI');

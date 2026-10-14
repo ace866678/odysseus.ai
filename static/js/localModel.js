@@ -8,7 +8,13 @@ async function loadPipeline(onStatus) {
   if (_pipelinePromise) return _pipelinePromise;
   _pipelinePromise = (async () => {
     onStatus?.('Loading the SmolLM2 runtime…');
-    const { pipeline, env } = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.2');
+    let transformers;
+    try {
+      transformers = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.2');
+    } catch (importError) {
+      throw new Error('Failed to load Transformers.js from jsDelivr. Check your internet connection and CSP settings. ' + importError.message);
+    }
+    const { pipeline, env } = transformers;
     env.allowRemoteModels = true;
     env.allowLocalModels = false;
     env.useBrowserCache = true;
@@ -16,37 +22,53 @@ async function loadPipeline(onStatus) {
       if (env.backends?.onnx?.wasm) env.backends.onnx.wasm.numThreads = 1;
     } catch (_) {}
 
+    const tryLoad = async (device, dtype, label) => {
+      onStatus?.(`${label}…`);
+      return await pipeline('text-generation', MODEL_ID, {
+        device,
+        dtype,
+        progress_callback: (event) => {
+          if (event?.status === 'progress' && Number.isFinite(event.progress)) {
+            onStatus?.(`Downloading SmolLM2: ${Math.round(event.progress)}%`);
+          } else if (event?.status === 'done') {
+            onStatus?.('SmolLM2 files ready; preparing the model…');
+          }
+        },
+      });
+    };
+
+    // Try WebGPU first
     if (navigator.gpu) {
       try {
-        onStatus?.('Downloading/loading SmolLM2 (about 273 MB, first run only)…');
-        return await pipeline('text-generation', MODEL_ID, {
-          device: 'webgpu',
-          dtype: 'q4f16',
-          progress_callback: (event) => {
-            if (event?.status === 'progress' && Number.isFinite(event.progress)) {
-              onStatus?.('Downloading SmolLM2: ' + Math.round(event.progress) + '%');
-            } else if (event?.status === 'done') {
-              onStatus?.('SmolLM2 files ready; preparing the model…');
-            }
-          },
-        });
+        return await tryLoad('webgpu', 'q4f16', 'Downloading/loading SmolLM2 via WebGPU (about 273 MB, first run only)');
       } catch (gpuError) {
         console.warn('[Odysseus local model] WebGPU load failed; trying CPU/WASM.', gpuError);
+        onStatus?.('WebGPU failed; falling back to CPU mode…');
       }
+    } else {
+      onStatus?.('WebGPU unavailable; using CPU mode. This may download larger model files and run slowly…');
     }
 
-    onStatus?.('WebGPU unavailable; trying CPU mode. This may download larger model files and run slowly…');
-    return await pipeline('text-generation', MODEL_ID, {
-      device: 'wasm',
-      dtype: 'q8',
-      progress_callback: (event) => {
-        if (event?.status === 'progress' && Number.isFinite(event.progress)) {
-          onStatus?.('Downloading SmolLM2: ' + Math.round(event.progress) + '%');
-        } else if (event?.status === 'done') {
-          onStatus?.('SmolLM2 files ready; preparing the model…');
-        }
-      },
-    });
+    // Try WASM
+    try {
+      return await tryLoad('wasm', 'q8', 'Downloading/loading SmolLM2 via CPU/WASM (about 273 MB, first run only)');
+    } catch (wasmError) {
+      // Provide more specific error messages
+      const msg = wasmError?.message || String(wasmError);
+      if (msg.includes('Failed to fetch') || msg.includes('network') || msg.includes('CSP')) {
+        throw new Error(
+          'Failed to download ONNX runtime files from jsDelivr. ' +
+          'This is usually caused by Content Security Policy blocking the connection. ' +
+          'Try: (1) Refresh the page (Ctrl+Shift+R), (2) Check browser console for CSP errors, ' +
+          '(3) Ensure https://cdn.jsdelivr.net is allowed in connect-src and worker-src. ' +
+          'Original error: ' + msg
+        );
+      }
+      if (msg.includes('memory') || msg.includes('OOM') || msg.includes('out of memory')) {
+        throw new Error('Not enough memory to load the model. Try closing other tabs or using a server-side model instead. Original error: ' + msg);
+      }
+      throw new Error('SmolLM2 failed to load on this device: ' + msg);
+    }
   })().catch((error) => {
     _pipelinePromise = null;
     throw error;

@@ -595,7 +595,7 @@ export async function refreshModels(force = false, opts = {}) {
         + '<select id="ody-browser-ai-model" style="width:100%;margin-top:5px">'
         + '<option value="smollm2-local">SmolLM2 · On-device (download ~273 MB)</option>'
         + '<option value="">Puter default model</option>'
-        + '</select><div class="muted-sm" id="ody-browser-ai-model-status" style="margin-top:5px">Loading available models…</div></div>'
+        + '</select><div class="muted-sm" id="ody-browser-ai-model-status" style="margin-top:5px">SmolLM2 runs on-device; Puter models load if available.</div></div>'
         + (window._isAdmin ? '<div style="margin-top:8px"><a href="#" onclick="document.getElementById(\'user-bar-admin\')?.click();return false;" class="accent-link">Configure a server provider in Admin</a></div>' : '');
 
       box.appendChild(noModels);

@@ -1014,6 +1014,12 @@ def _probe_endpoint(base_url: str, api_key: str = None, timeout: int = 5) -> Lis
     For Anthropic, queries their /v1/models API, falling back to hardcoded list."""
     from src.endpoint_resolver import resolve_url
     from src.llm_core import httpx_get_kimi_aware
+    # When QwenCloud's key is supplied by Railway Variables, the admin form can
+    # leave its API-key field blank and still test/discover the configured model.
+    if not api_key:
+        host = (urlparse(base_url or "").hostname or "").lower()
+        if host == "maas.qwencloudapi.com" or host.endswith(".maas.qwencloudapi.com"):
+            api_key = os.environ.get("DASHSCOPE_API_KEY") or None
     base = resolve_url(_normalize_base(base_url))
     provider = _safe_detect_provider(base)
     if provider == "chatgpt-subscription":

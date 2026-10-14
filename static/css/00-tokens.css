@@ -33,11 +33,11 @@
 
 :root {
   /* Core palette */
-  --bg: #282c34;
-  --fg: #9cdef2;
-  --panel: #111;
-  --border: #355a66;
-  --red: #e06c75;
+  --bg: #071426;
+  --fg: #dce8f8;
+  --panel: #0b1f38;
+  --border: #1d3b61;
+  --red: #4f8cff;
   /* Were `var(--green)` / `var(--warn)` — self-referential, so they
      resolved to invalid and every site fell back to its own literal
      (or, for sites with no fallback, painted as transparent/inherit).
@@ -46,8 +46,8 @@
   --warn: #f0ad4e;
 
   /* Syntax highlighting */
-  --hl-bg: #1e2228;
-  --hl-fg: #9cdef2;
+  --hl-bg: #091a2e;
+  --hl-fg: #dce8f8;
   --hl-keyword: #c678dd;
   --hl-string: #e5c07b;
   --hl-comment: #828997;
@@ -67,7 +67,7 @@
   --color-recording-hover: #d63031;
   --color-muted: #888;
   --color-muted-alt: #6b7280;
-  --color-accent: #00aaff;
+  --color-accent: #4f8cff;
   --color-agent-active: #00ff00;
   --color-brand-blue: #3b82f6;
   --color-blind-orange: #ff9800;

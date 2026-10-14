@@ -596,16 +596,7 @@ export async function refreshModels(force = false, opts = {}) {
         + '<option value="smollm2-local">SmolLM2 · On-device (download ~273 MB)</option>'
         + '<option value="">Puter default model</option>'
         + '</select><div class="muted-sm" id="ody-browser-ai-model-status" style="margin-top:5px">Loading available models…</div></div>'
-        + (window._isAdmin ? `
-          <hr style="margin:12px 0;border-color:var(--border);">
-          <div style="margin-top:8px">
-            <label class="muted-sm" for="ody-provider-preset">Quick-add a provider</label>
-            <select id="ody-provider-preset" style="width:100%;margin-top:5px">
-              <option value="">— Select a provider preset —</option>
-            </select>
-            <div class="muted-sm" id="ody-provider-preset-hint" style="margin-top:5px"></div>
-          </div>
-        ` : '<div style="margin-top:8px"><a href="#" onclick="document.getElementById(\'user-bar-admin\')?.click();return false;" class="accent-link">Configure a server provider in Admin</a></div>');
+        + (window._isAdmin ? '' : '<div style="margin-top:8px"><a href="#" onclick="document.getElementById(\'user-bar-admin\')?.click();return false;" class="accent-link">Configure a server provider in Admin</a></div>');
 
       box.appendChild(noModels);
       const browserModelSelect = noModels.querySelector('#ody-browser-ai-model');
@@ -656,9 +647,26 @@ export async function refreshModels(force = false, opts = {}) {
           modelStatus.textContent = 'SmolLM2 is available on-device; the optional Puter model catalog could not load.';
         }
       }
+
+    }
+    if (window._isAdmin && !box.querySelector('#ody-provider-preset')) {
+      const providerPresetPanel = document.createElement('div');
+      providerPresetPanel.className = 'models-provider-preset';
+      providerPresetPanel.style.cssText = 'padding:8px 12px;border-top:1px solid var(--border);';
+      providerPresetPanel.innerHTML = `
+        <div style="margin-top:8px">
+          <label class="muted-sm" for="ody-provider-preset">Quick-add a provider</label>
+          <select id="ody-provider-preset" style="width:100%;margin-top:5px">
+            <option value="">— Select a provider preset —</option>
+          </select>
+          <div class="muted-sm" id="ody-provider-preset-hint" style="margin-top:5px"></div>
+        </div>
+      `;
+      box.appendChild(providerPresetPanel);
+
       // Provider preset handler
-      const presetSelect = noModels.querySelector('#ody-provider-preset');
-      const presetHint = noModels.querySelector('#ody-provider-preset-hint');
+      const presetSelect = providerPresetPanel.querySelector('#ody-provider-preset');
+      const presetHint = providerPresetPanel.querySelector('#ody-provider-preset-hint');
       if (presetSelect && presetHint) {
         // Load presets from server
         fetch(`${API_BASE}/api/provider-presets`, { credentials: 'same-origin' })
@@ -754,6 +762,7 @@ export async function refreshModels(force = false, opts = {}) {
         });
       }
     }
+
   } catch (e) {
     console.error(e);
     box.textContent = '(render failed: ' + e.message + ')';

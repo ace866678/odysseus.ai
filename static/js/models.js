@@ -647,7 +647,6 @@ export async function refreshModels(force = false, opts = {}) {
           modelStatus.textContent = 'SmolLM2 is available on-device; the optional Puter model catalog could not load.';
         }
       }
-      }
     }
   } catch (e) {
     console.error(e);

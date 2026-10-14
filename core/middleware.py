@@ -148,7 +148,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
                 # Transformers.js is imported from jsDelivr and fetches its ONNX
                 # runtime assets there. Without this connect-src entry, the
                 # browser fallback loads the JS module but cannot initialize the model.
-                "connect-src 'self' https://cdn.jsdelivr.net https://js.puter.com https://huggingface.co https://*.huggingface.co https://*.xethub.hf.co https://us.aws.cdn.hf.co https://*.cdn.hf.co; "
+                "connect-src 'self' https://cdn.jsdelivr.net https://js.puter.com https://puter.com https://huggingface.co https://*.huggingface.co https://*.xethub.hf.co https://us.aws.cdn.hf.co https://*.cdn.hf.co; "
                 "worker-src 'self' blob: https://cdn.jsdelivr.net https://js.puter.com; "
                 "frame-src 'self'; "
                 "frame-ancestors 'none'"

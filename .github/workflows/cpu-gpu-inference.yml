@@ -1,0 +1,82 @@
+name: CPU/GPU Model Inference
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Choose which real compute device to test"
+        required: true
+        type: choice
+        options:
+          - cpu
+          - gpu
+          - both
+        default: cpu
+
+permissions:
+  contents: read
+
+concurrency:
+  group: model-inference-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  cpu-inference:
+    name: Real CPU inference
+    if: ${{ inputs.mode == 'cpu' || inputs.mode == 'both' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.11"
+
+      - name: Install CPU-only PyTorch and Transformers
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --index-url https://download.pytorch.org/whl/cpu torch
+          python -m pip install transformers safetensors
+
+      - name: Run SmolLM2 on the hosted CPU
+        env:
+          HF_HUB_DISABLE_TELEMETRY: "1"
+          TOKENIZERS_PARALLELISM: "false"
+        run: python .github/scripts/run_model_inference.py --device cpu
+
+  gpu-inference:
+    name: Real NVIDIA GPU inference (CUDA)
+    if: ${{ inputs.mode == 'gpu' || inputs.mode == 'both' }}
+    # Requires an online self-hosted Linux x64 runner with the custom "gpu" label,
+    # an NVIDIA GPU/driver, and network access to download the model.
+    runs-on: [self-hosted, linux, x64, gpu]
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.11"
+
+      - name: Verify NVIDIA hardware
+        run: nvidia-smi
+
+      - name: Install PyTorch and Transformers
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install torch transformers safetensors
+
+      - name: Run SmolLM2 on the NVIDIA GPU
+        env:
+          HF_HUB_DISABLE_TELEMETRY: "1"
+          TOKENIZERS_PARALLELISM: "false"
+        run: python .github/scripts/run_model_inference.py --device cuda

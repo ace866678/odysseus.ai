@@ -131,14 +131,14 @@ function _setSortMode(mode) {
  * Build a single model row element.
  */
 function _startChat(url, mid, endpointId) {
-  // Block model switching while compare mode is active
+  // Block model switching while compare mode is active.
   if (window.compareModule && window.compareModule.isActive()) return;
   _trackUsage(mid);
-  if (sessionModule) {
-    sessionModule.createDirectChat(url, mid, endpointId);
-  } else if (uiModule) {
-    uiModule.showError('Session module not loaded');
-  }
+  // Route through the chat picker's validated/deferred switch path. This keeps
+  // the current transcript visible and only materializes a new session on Send.
+  document.dispatchEvent(new CustomEvent('odysseus:select-free-model', {
+    detail: { url: url || '', modelId: mid || '', endpointId: endpointId || '' },
+  }));
 }
 
 function _buildModelRow(mid, url, displayName, endpointId, offline, modelType) {

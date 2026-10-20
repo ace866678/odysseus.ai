@@ -101,9 +101,25 @@ _formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(messa
 for _h in list(_root_logger.handlers):
     _root_logger.removeHandler(_h)
 
-_console_h = logging.StreamHandler()
-_console_h.setFormatter(_formatter)
-_root_logger.addHandler(_console_h)
+class _BelowWarningFilter(logging.Filter):
+    """Keep routine log records on stdout for hosted log collectors."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        return record.levelno < logging.WARNING
+
+
+# Railway classifies stderr output as errors even when the formatted record
+# says INFO. Split console streams by severity so routine messages stay healthy.
+_console_out_h = logging.StreamHandler(sys.stdout)
+_console_out_h.setLevel(logging.INFO)
+_console_out_h.addFilter(_BelowWarningFilter())
+_console_out_h.setFormatter(_formatter)
+_root_logger.addHandler(_console_out_h)
+
+_console_err_h = logging.StreamHandler(sys.stderr)
+_console_err_h.setLevel(logging.WARNING)
+_console_err_h.setFormatter(_formatter)
+_root_logger.addHandler(_console_err_h)
 
 try:
     _log_dir = os.path.join(DATA_DIR, "logs")

@@ -90,7 +90,7 @@ class EvolvingAIConfig:
     def __repr__(self) -> str:
         return (
             "EvolvingAIConfig("
-            f"enabled={self.enabled!r}, base_url={self.base_url!r}, "
+            f"enabled={self.enabled!r}, base_url={'<configured>' if self.base_url else ''!r}, "
             f"model={self.model!r}, api_key={'<redacted>' if self.api_key else ''!r}, "
             f"timeout_seconds={self.timeout_seconds!r})"
         )
